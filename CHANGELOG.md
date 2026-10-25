@@ -1,11 +1,37 @@
 # Changelog
 
+## [0.1.4-alpha] - 2026-10-24
+
+### Added
+- **Issue hygiene automation** (PR #42, #43): nightly triage scripts for issues and PRs, auto-labeling with area/priority/type, stale-issue detection (180d), milestone assignment.
+- **Issue transfer**: 17 WF-023 through WF-050 issues migrated from `ai4xedu/openwa-oci-infra`.
+- **WaFine-only issue/PR hygiene**: now runs exclusively on `zawia-tech/wafine`.
+
+### Changed
+- **Repository transition**: `zawia-tech/wafine` is now the single canonical repo; `ai4xedu/openwa-oci-infra` to be archived.
+- **Branch protection**: both `main` and `develop` protected (strict CI + 1 review).
+- **Default branch**: `develop` (from `claude/brave-hypatia-wvxmq0`).
+
+### Release
+- Synced from `openwa-oci-infra` main `52942c8` (PR #44).
+- Exporter deny-list verified: operator-only files (CLAUDE.md, TASKS.md, docs/03-runbook.md) correctly excluded.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.2-alpha] - 2026-10-19
+## [0.1.5-alpha] - 2026-10-24
+
+Built from PRs #74, #75, #76 on `develop`.
+
+### Fixed
+
+- **WF-001: Rate-limit client IP spoofing** (#74, `mo/wf-001-client-ip`): `TRUSTED_PROXY_HOPS` (default 1) and `TRUST_CF_CONNECTING_IP` from env config, wired through all three BFF rate limiters and OAuth endpoints. Prevents spoofed X-Forwarded-For and shared `unknown` bucket across connections.
+
+- **WF-003: False public security/privacy claims** (#75, `mo/wf-003-claims`): corrected i18n strings (EN/FR/AR) — "stored encrypted" → "stored on our own server", gap-paced claims (only auto-replies), per-session key limits (up to 5), and revoke wording (leaked token cannot revoke without valid bearer).
+
+- **WF-004: OAuth revoke authentication** (#76, `mo/wf-004-revoke`): `/oauth/revoke` now requires RFC 6750 bearer auth (RFC 7009+6750). Bearer must differ from the revoked token (403 if same) — a leaked access token cannot revoke itself. Bearer must be a live, unexpired access token of the same grant; unknown/foreign tokens → 200 no-op.
 
 Built from merged PRs #88 through #108 on `main`.
 
