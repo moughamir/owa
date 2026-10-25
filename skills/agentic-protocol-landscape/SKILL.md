@@ -57,7 +57,7 @@ Always say which ACP you mean. When in doubt, spell it out.
 - Auth is **OAuth 2.1** for connectors, or a minted API key: the BFF is an
   authorization server with `/.well-known/oauth-protected-resource`,
   `/.well-known/oauth-authorization-server`, `/oauth/register`, `/oauth/authorize`,
-  `/oauth/token`, `/oauth/revoke` (`app/bff/src/adapters/http/routes/oauth.ts:182-365`;
+  `/oauth/token`, `/oauth/revoke` (bearer-authenticated; `app/bff/src/adapters/http/routes/oauth.ts:168-396`;
   flow in `docs/10-claude-connector.md`).
 - Tools live in the engine, not the BFF: 51 tools (25 read, 26 write). The BFF only
   recognises the send tools it must budget: `MessageSendText`, `MessageSendImage`,

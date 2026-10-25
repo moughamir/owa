@@ -16,6 +16,7 @@ import { InMemoryOAuthRepository } from '../persistence/in-memory-oauth.js';
 import { HealthAggregator } from '../../infrastructure/health/health-aggregator.js';
 import { SecretBox } from '../../infrastructure/crypto/secret-box.js';
 import { pkceS256, redirectUriAllowed, redirectUriMatches } from './routes/oauth.js';
+import { sha256Hex } from './routes/wa.js';
 import { createApp } from './app.js';
 
 const API = 'https://api.example.test';
@@ -97,6 +98,7 @@ class FakeGateway implements IWhatsAppGateway {
 let app: ReturnType<typeof createApp>;
 let gateway: FakeGateway;
 let engineCalls: { url: string; headers: Headers }[];
+let oauthRepo: InMemoryOAuthRepository;
 const user = { Authorization: `Bearer tok:${U1}` };
 
 beforeEach(async () => {
@@ -108,6 +110,7 @@ beforeEach(async () => {
   const tenancy = new InMemoryWaTenancyRepository();
   gateway = new FakeGateway();
   engineCalls = [];
+  oauthRepo = new InMemoryOAuthRepository(tenancy);
   app = createApp({
     health: new HealthAggregator([]),
     accounts,
@@ -127,7 +130,7 @@ beforeEach(async () => {
         });
       }) as typeof fetch,
       oauth: {
-        repo: new InMemoryOAuthRepository(tenancy),
+        repo: oauthRepo,
         box: new SecretBox(randomBytes(32).toString('base64')),
         webUrl: WEB,
       },
@@ -140,6 +143,14 @@ const form = (fields: Record<string, string>) => ({
   headers: { 'content-type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams(fields).toString(),
 });
+
+/** /oauth/revoke now requires the connection's own live access token as an RFC 6750 bearer. */
+const revokeForm = (fields: Record<string, string>, bearer?: string) => {
+  const f = form(fields);
+  return bearer
+    ? { ...f, headers: { ...f.headers, Authorization: `Bearer ${bearer}` } }
+    : f;
+};
 
 async function register(redirectUris = [CLAUDE_CB]) {
   const res = await app.request('/oauth/register', {
@@ -301,11 +312,16 @@ describe('authorization code flow', () => {
 });
 
 describe('refresh rotation, reuse detection, revocation', () => {
-  async function connected() {
-    await app.request('/api/wa/session', { method: 'POST', headers: user });
+  /** Second (or later) connection for the same user — no new session needed. */
+  async function connectAgain() {
     const { body: client } = await register();
     const code = (await approvedCode(client.client_id)).searchParams.get('code')!;
     return { clientId: client.client_id, tokens: (await exchange(client.client_id, code)).body };
+  }
+
+  async function connected() {
+    await app.request('/api/wa/session', { method: 'POST', headers: user });
+    return connectAgain();
   }
 
   it('rotates refresh tokens and revokes everything on reuse', async () => {
@@ -335,8 +351,9 @@ describe('refresh rotation, reuse detection, revocation', () => {
 
   it('RFC 7009 revoke ends the connection; deleting the session kills connector keys too', async () => {
     const { tokens } = await connected();
-    expect((await app.request('/oauth/revoke', form({ token: tokens['access_token']! }))).status).toBe(200);
-    expect((await mcp(tokens['access_token']!)).status).toBe(401);
+    const at = tokens['access_token']!;
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at }, at))).status).toBe(200);
+    expect((await mcp(at)).status).toBe(401);
 
     const again = await connected();
     expect((await app.request('/api/wa/session', { method: 'DELETE', headers: user })).status).toBe(204);
@@ -344,24 +361,79 @@ describe('refresh rotation, reuse detection, revocation', () => {
     expect((await mcp(again.tokens['access_token']!)).status).toBe(401);
   });
 
+  it('revoke answers 401 without a live bearer, so a leaked token alone cannot end a connection', async () => {
+    const { tokens } = await connected();
+    const at = tokens['access_token']!;
+    const ensureAlive = async () => {
+      expect((await mcp(at)).status).toBe(200);
+      expect([...gateway.keys.values()].every((k) => !k.revoked)).toBe(true);
+    };
+    // no Authorization header
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at }))).status).toBe(401);
+    await ensureAlive();
+    // unknown token as bearer
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at }, 'wao_at_nope'))).status).toBe(401);
+    await ensureAlive();
+  });
+
+  it('revoke bearer must be a live ACCESS token: refresh tokens and expired tokens are refused', async () => {
+    const { tokens } = await connected();
+    const at = tokens['access_token']!;
+    const ensureAlive = async () => {
+      expect((await mcp(at)).status).toBe(200);
+      expect([...gateway.keys.values()].every((k) => !k.revoked)).toBe(true);
+    };
+    const grantCount = async () => {
+      const list = (await (await app.request('/api/oauth/grants', { headers: user })).json()) as { grants: unknown[] };
+      return list.grants.length;
+    };
+    // a refresh token is not an RFC 6750 bearer (wrong kind)
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at }, tokens['refresh_token']!))).status).toBe(401);
+    await ensureAlive();
+    // expired access token: expiresAt set directly on the stored row (kills bearer AND
+    // /mcp for that token, so liveness is re-checked against the grants list instead)
+    const rows = oauthRepo as unknown as { tokens: Map<string, { expiresAt: Date }> };
+    rows.tokens.get(sha256Hex(at))!.expiresAt = new Date(0);
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at }, at))).status).toBe(401);
+    expect(await grantCount()).toBe(1);
+    expect([...gateway.keys.values()].every((k) => !k.revoked)).toBe(true);
+  });
+
+  it('a bearer of one connection cannot revoke another connection', async () => {
+    const a = await connected();
+    const b = await connectAgain();
+    const res = await app.request(
+      '/oauth/revoke',
+      revokeForm({ token: b.tokens['access_token']! }, a.tokens['access_token']!),
+    );
+    expect(res.status).toBe(200);
+    expect((await mcp(a.tokens['access_token']!)).status).toBe(200);
+    expect((await mcp(b.tokens['access_token']!)).status).toBe(200);
+    expect([...gateway.keys.values()].every((k) => !k.revoked)).toBe(true);
+  });
+
   it('revoke requires the token parameter and leaks nothing for unknown tokens (no oracle)', async () => {
     const { tokens } = await connected();
+    const at = tokens['access_token']!;
     // missing token param: malformed request per RFC 7009 §2.1
-    const missing = await app.request('/oauth/revoke', form({}));
+    const missing = await app.request('/oauth/revoke', revokeForm({}, at));
     expect(missing.status).toBe(400);
     expect(((await missing.json()) as Record<string, string>)['error']).toBe('invalid_request');
     // unknown token: 200 + nothing revoked (connection still alive)
-    const unknown = await app.request('/oauth/revoke', form({ token: 'not-a-real-token' }));
+    const unknown = await app.request('/oauth/revoke', revokeForm({ token: 'not-a-real-token' }, at));
     expect(unknown.status).toBe(200);
-    expect((await mcp(tokens['access_token']!)).status).toBe(200);
+    expect((await mcp(at)).status).toBe(200);
     expect([...gateway.keys.values()].every((k) => !k.revoked)).toBe(true);
     // empty token string counts as missing
-    expect((await app.request('/oauth/revoke', form({ token: '' }))).status).toBe(400);
+    expect((await app.request('/oauth/revoke', revokeForm({ token: '' }, at))).status).toBe(400);
   });
 
   it('revoking with the refresh token ends the whole connection: tokens and engine key', async () => {
     const { tokens } = await connected();
-    const res = await app.request('/oauth/revoke', form({ token: tokens['refresh_token']! }));
+    const res = await app.request(
+      '/oauth/revoke',
+      revokeForm({ token: tokens['refresh_token']! }, tokens['access_token']!),
+    );
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe('no-store');
     // access token of the same grant dies, engine key is revoked, MCP is unusable
@@ -369,25 +441,35 @@ describe('refresh rotation, reuse detection, revocation', () => {
     expect([...gateway.keys.values()].every((k) => k.revoked)).toBe(true);
   });
 
-  it('mismatched client_id still revokes via token possession; unknown client with valid token is a no-op', async () => {
-    const { tokens } = await connected();
-    expect((await app.request('/oauth/revoke', form({ token: tokens['access_token']!, client_id: 'owa_c_other' }))).status).toBe(200);
-    // wrong client_id: no action, connection still alive
-    expect((await mcp(tokens['access_token']!)).status).toBe(200);
-    // matching client_id: whole connection ends
-    const { clientId, tokens: t2 } = await connected();
-    expect((await app.request('/oauth/revoke', form({ token: t2['access_token']!, client_id: clientId }))).status).toBe(200);
-    expect((await mcp(t2['access_token']!)).status).toBe(401);
+  it('revoke challenge carries the bearer scheme', async () => {
+    await connected();
+    const res = await app.request('/oauth/revoke', revokeForm({ token: 'whichever' }));
+    expect(res.status).toBe(401);
+    expect(res.headers.get('www-authenticate')).toBe('Bearer realm="oauth-revoke"');
+    expect(((await res.json()) as Record<string, string>)['error']).toBe('invalid_client');
   });
 
-  it('revoke is rate-limited (20/min)', async () => {
+  it('mismatched client_id does not revoke the connection', async () => {
+    const { clientId, tokens } = await connected();
+    const at = tokens['access_token']!;
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at, client_id: 'owa_c_other' }, at))).status).toBe(200);
+    // wrong client_id: no action, connection still alive
+    expect((await mcp(at)).status).toBe(200);
+    // matching client_id: whole connection ends
+    const { clientId: id2, tokens: t2 } = await connectAgain();
+    expect((await app.request('/oauth/revoke', revokeForm({ token: t2['access_token']!, client_id: id2 }, t2['access_token']!))).status).toBe(200);
+    expect((await mcp(t2['access_token']!)).status).toBe(401);
+    expect(clientId).not.toBe(id2);
+  });
+
+  it('revoke is rate-limited (20/min); 401s count against the bucket too', async () => {
     const codes = Array.from({ length: 21 }, () => 'nope');
     const statuses: number[] = [];
     for (const token of codes) {
-      const res = await app.request('/oauth/revoke', form({ token }));
+      const res = await app.request('/oauth/revoke', revokeForm({ token }));
       statuses.push(res.status);
     }
-    expect(statuses.slice(0, 20).every((s) => s === 200)).toBe(true);
+    expect(statuses.slice(0, 20).every((s) => s === 401)).toBe(true);
     expect(statuses[20]).toBe(429);
   });
 
