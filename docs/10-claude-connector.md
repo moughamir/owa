@@ -28,7 +28,9 @@ Claude -> POST /mcp  Bearer <access>      BFF resolves the hash, opens the seale
   never a redirect. The consent page shows the redirect host and warns on loopback.
 - Refresh tokens rotate; reusing a rotated one revokes the whole connection and its engine key.
 - Disconnect from `/whatsapp` (Connected apps), `POST /oauth/revoke`, or deleting the WhatsApp session revokes the
-  grant and its engine key. Rate limits: register 20/min/IP, token 60/min/IP, MCP 120/min per connection.
+  grant and its engine key. Revoke is self-service (RFC 7009): the caller must present the connection's own live
+  access token as an RFC 6750 bearer (401 otherwise), so a leaked token alone cannot kill it. Rate limits:
+  register 20/min/IP, token 60/min/IP, MCP 120/min per connection.
 - Pending sign-in requests and codes live in BFF memory (10 min / 5 min); a BFF restart only cancels in-flight sign-ins.
 
 ## Operate

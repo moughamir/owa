@@ -66,15 +66,15 @@
     "steps": [
       {
         "title": "Connectez votre numéro",
-        "body": "Scannez une fois un code QR depuis WhatsApp Web. La session est stockée chiffrée sur notre serveur à Casablanca — pas sur un portable qui se met en veille."
+        "body": "Scannez une fois un code QR depuis WhatsApp Web. La session est stockée sur notre propre serveur à Casablanca — pas sur un portable qui se met en veille."
       },
       {
         "title": "Écrivez des réponses automatiques rythmées",
-        "body": "Un webhook à l'entrée, un workflow à la sortie. Chaque réponse passe par un expéditeur rythmé : un intervalle configurable entre les messages, un plafond quotidien, et pas de tempêtes de nouvelles tentatives."
+        "body": "Un webhook à l'entrée, un workflow à la sortie. Chaque réponse automatique passe par un expéditeur rythmé : un intervalle configurable entre les messages, un plafond quotidien, et pas de tempêtes de nouvelles tentatives."
       },
       {
         "title": "Appelez-le depuis n'importe où",
-        "body": "Créez une clé API par session et parlez à l'API REST, ou ajoutez l'endpoint MCP à Claude et utilisez votre numéro en langage naturel."
+        "body": "Créez une clé API limitée à votre session (jusqu'à cinq actives) et parlez à l'API REST, ou ajoutez l'endpoint MCP à Claude et utilisez votre numéro en langage naturel."
       }
     ]
   },
@@ -91,7 +91,7 @@
     "snippetHeading": "Ou depuis un terminal avec Claude Code",
     "snippetFieldLabel": "Commande Claude Code",
     "snippet": "claude mcp add --transport http whatsapp {connectorUrl}",
-    "consentNote": "L'écran de consentement est explicite : Claude peut lire vos chats, messages, contacts et groupes, et envoyer des messages depuis votre numéro — via votre session uniquement. Déconnectez Claude sous « Applications connectées » dans l'app web pour couper son accès.",
+    "consentNote": "L'écran de consentement est explicite : Claude peut lire vos chats, messages, contacts et groupes, et envoyer des messages depuis votre numéro — via votre session uniquement. Vous pouvez déconnecter Claude à tout moment sous « Applications connectées » dans l'app web.",
     "docsLabel": "Lire le guide du connecteur"
   },
   "features": {
@@ -172,7 +172,7 @@
       },
       {
         "q": "Où sont mes données, et où en est la CNDP ?",
-        "a": "La session WhatsApp tourne sur notre propre VM à Casablanca et la base de données de l'application est dans la région parisienne de Supabase : vos données restent au Maroc et dans l'UE. Les données sont chiffrées en transit et les fournisseurs d'infrastructure les chiffrent au repos ; il n'y a pas de chiffrement de bout en bout du contenu des messages. Nous suivons les attentes de la loi marocaine 09-08 pour les données personnelles."
+        "a": "La session WhatsApp tourne sur notre propre VM à Casablanca et la base de données de l'application est dans la région parisienne de Supabase : vos données restent au Maroc et dans l'UE. Les données sont chiffrées en transit ; il n'y a pas de chiffrement de bout en bout du contenu des messages. Nous suivons les attentes de la loi marocaine 09-08 pour les données personnelles."
       },
       {
         "q": "Quels numéros puis-je connecter ?",

@@ -7,7 +7,7 @@
  *   POST /oauth/register                               RFC 7591, public clients only
  *   GET  /oauth/authorize                              code + PKCE S256 -> web consent page
  *   POST /oauth/token                                  authorization_code | refresh_token (rotating)
- *   POST /oauth/revoke                                 RFC 7009
+ *   POST /oauth/revoke                                 RFC 7009 + RFC 6750 bearer
  *   /api/oauth/*                                       consent + connected apps (Supabase session)
  *
  * Registration accepts only Claude's hosted callback and loopback redirects, so this server
@@ -26,8 +26,10 @@ import type { SecretBox } from '../../../infrastructure/crypto/secret-box.js';
 import { TokenBucketRateLimiter } from '../../../infrastructure/auth/rate-limit.js';
 import { sha256Hex } from './wa.js';
 // Shared with app.ts: trusts only the rightmost TRUSTED_PROXY_HOPS x-forwarded-for
-// entries (see ../client-ip.ts for the trust model); never the leftmost entry.
-import { clientIp } from '../client-ip.js';
+// entries (see ../client-ip.ts for the trust model); never the leftmost entry. The
+// config comes from config/env.ts, validated once by clientIpConfigFor.
+import { clientIp, clientIpConfigFor } from '../client-ip.js';
+import { env } from '../../../config/env.js';
 
 export const ACCESS_TTL_SECONDS = 3600;
 export const REFRESH_TTL_SECONDS = 30 * 24 * 3600;
@@ -168,8 +170,10 @@ async function readParams(c: Context): Promise<Record<string, string>> {
 export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new FlowStore()) {
   const issuer = deps.publicApiUrl.replace(/\/$/, '');
   const limiter = new TokenBucketRateLimiter();
+  // Same client-IP trust model as app.ts, fed from config/env.ts.
+  const clientIpCfg = clientIpConfigFor(env.trustedProxyHops, env.trustCfConnectingIp);
   const limited = async (c: Context, bucket: string, limit: number) =>
-    !(await limiter.isAllowed(`${bucket}:${clientIp(c)}`, limit, 60));
+    !(await limiter.isAllowed(`${bucket}:${clientIp(c, clientIpCfg)}`, limit, 60));
 
   const resourceMetadata = {
     resource: canonicalResource(issuer),
@@ -194,6 +198,8 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
       grant_types_supported: ['authorization_code', 'refresh_token'],
       code_challenge_methods_supported: ['S256'],
       token_endpoint_auth_methods_supported: ['none'],
+      // Public clients (no client secrets). Revocation additionally requires the caller's
+      // own live access token as an RFC 6750 bearer — see /oauth/revoke below.
       revocation_endpoint_auth_methods_supported: ['none'],
       scopes_supported: [...SCOPES],
       authorization_response_iss_parameter_supported: true,
@@ -290,6 +296,15 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
     if (keyId) await deps.gateway.revokeApiKey(keyId).catch((err) => console.error('engine key revoke failed', keyId, err));
   }
 
+  /** RFC 6750 bearer on an AS endpoint: valid only while the token is an unexpired access token. */
+  async function resolveBearer(c: Context) {
+    const authz = c.req.header('authorization');
+    if (!authz || !/^Bearer\s+/i.test(authz)) return null;
+    const t = await deps.oauth.findToken(sha256Hex(authz.replace(/^Bearer\s+/i, '')));
+    if (!(t && t.kind === 'access' && t.expiresAt.getTime() > Date.now())) return null;
+    return t;
+  }
+
   // ── Token endpoint ──
   app.post('/oauth/token', async (c) => {
     if (await limited(c, 'oauth-token', 60)) return c.json({ error: 'rate_limited' }, 429);
@@ -355,21 +370,28 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
     return oauthError(c, 400, 'unsupported_grant_type', 'Use authorization_code or refresh_token');
   });
 
-  // ── RFC 7009 revocation: revoking any token ends the whole connection ──
-  // Per RFC 7009 a public client revokes by sending the token value it owns (§2.1): no
-  // user session is required, and the endpoint answers 200 whether or not the token
-  // existed so probing for valid tokens reveals nothing. `token` is REQUIRED (§2.1),
-  // so a request without it is a 400 malformed request — that check leaks nothing.
-  // An optional `client_id` must match the token's client, still without an oracle.
-  // Revoking the whole
-  // grant (not just one token row) also drops the connector's engine key: possession
-  // of ANY token of the connection is enough to end all of it.
+  // ── RFC 7009 revocation, bearer-authenticated and self-service ──
+  // The caller must present a live access token of the connection being revoked as an
+  // RFC 6750 bearer (same rules as /mcp: kind access, unexpired, active grant): a leaked
+  // `token` value alone can no longer end a connection — only the resource owner, holding
+  // that connection's own valid bearer, can (RFC 7009 §5.2 authorization). Client auth
+  // stays "none" (public clients carry no secret); the bearer is the authorization.
+  // Authentication is checked before body validation (RFC 6749 §5.2): a dead bearer is
+  // 401 with a challenge. As before, `token` is REQUIRED (§2.1), and a token that is
+  // unknown or belongs to another connection is answered 200 without acting — revoking
+  // reveals nothing. Revoking the whole grant (not just one token row) also drops the
+  // connector's engine key.
   app.post('/oauth/revoke', async (c) => {
     if (await limited(c, 'oauth-revoke', 20)) return c.json({ error: 'rate_limited' }, 429);
+    const presented = await resolveBearer(c);
+    if (!presented) {
+      c.header('WWW-Authenticate', 'Bearer realm="oauth-revoke"');
+      return oauthError(c, 401, 'invalid_client', 'A live access token of the connection is required');
+    }
     const p = await readParams(c);
     if (!p['token']) return oauthError(c, 400, 'invalid_request', 'token parameter required');
     const t = await deps.oauth.findToken(sha256Hex(p['token']));
-    if (t && (!p['client_id'] || p['client_id'] === t.clientId)) {
+    if (t && t.grantId === presented.grantId && (!p['client_id'] || p['client_id'] === t.clientId)) {
       await revokeAtEngine(await deps.oauth.revokeGrant(t.grantId));
     }
     c.header('Cache-Control', 'no-store');

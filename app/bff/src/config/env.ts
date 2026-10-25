@@ -97,6 +97,19 @@ export const env = {
   // Rate limiting
   rateLimitDefault: parseInt(process.env['RATE_LIMIT_DEFAULT'] ?? '60', 10),
   rateLimitWindowSeconds: parseInt(process.env['RATE_LIMIT_WINDOW_SECONDS'] ?? '60', 10),
+  /**
+   * Rate-limit client-IP trust model (src/adapters/http/client-ip.ts): the BFF sits behind
+   * proxies (Vercel server proxy -> rewrite -> Tailscale Funnel, or the tunnel) that each append
+   * one entry to x-forwarded-for, so only the rightmost `trustedProxyHops` entries — the ones
+   * our infrastructure writes — identify the client; everything to their left is spoofable.
+   * Default 1; non-integer or negative values fall back to 1 in clientIpConfigFor.
+   */
+  trustedProxyHops: parseInt(process.env['TRUSTED_PROXY_HOPS'] ?? '1', 10),
+  /**
+   * TRUST_CF_CONNECTING_IP=1 only when Cloudflare's own tunnel ingress is the proxy directly
+   * in front of the BFF: `cf-connecting-ip` then beats x-forwarded-for for attribution.
+   */
+  trustCfConnectingIp: process.env['TRUST_CF_CONNECTING_IP'] === '1',
 
   // Crypto
   argon2MemoryKb: parseInt(process.env['ARGON2_MEMORY_KB'] ?? '65536', 10), // 64 MiB

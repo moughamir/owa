@@ -66,15 +66,15 @@
     "steps": [
       {
         "title": "Connect your number",
-        "body": "Scan a QR code from WhatsApp Web once. The session is stored encrypted on our server in Casablanca — not on a laptop that sleeps."
+        "body": "Scan a QR code from WhatsApp Web once. The session is stored on our own server in Casablanca — not on a laptop that sleeps."
       },
       {
         "title": "Write paced auto-replies",
-        "body": "Webhook in, workflow out. Every reply goes through a paced sender: a configurable gap between messages, a daily cap, and no retry storms."
+        "body": "Webhook in, workflow out. Every auto-reply goes through a paced sender: a configurable gap between messages, a daily cap, and no retry storms."
       },
       {
         "title": "Call it from anywhere",
-        "body": "Mint a per-session API key and talk to the REST API, or add the MCP endpoint to Claude and use your number in plain language."
+        "body": "Mint a per-session API key (up to five active per session) and talk to the REST API, or add the MCP endpoint to Claude and use your number in plain language."
       }
     ]
   },
@@ -91,7 +91,7 @@
     "snippetHeading": "Or from a terminal with Claude Code",
     "snippetFieldLabel": "Claude Code command",
     "snippet": "claude mcp add --transport http whatsapp {connectorUrl}",
-    "consentNote": "The consent screen is explicit: Claude can read your chats, messages, contacts and groups, and send messages from your number — through your session only. Disconnect Claude under Connected apps in the web app to end its access.",
+    "consentNote": "The consent screen is explicit: Claude can read your chats, messages, contacts and groups, and send messages from your number — through your session only. You can disconnect Claude at any time under Connected apps in the web app.",
     "docsLabel": "Read the connector guide"
   },
   "features": {
@@ -172,7 +172,7 @@
       },
       {
         "q": "Where is my data, and what about the CNDP?",
-        "a": "The WhatsApp session runs on our own VM in Casablanca and the application database is in Supabase’s Paris region, so your data stays in Morocco and the EU. Data is encrypted in transit and the infrastructure providers encrypt it at rest; there is no end-to-end encryption of message content. We follow Moroccan law 09-08 expectations for personal data."
+        "a": "The WhatsApp session runs on our own VM in Casablanca and the application database is in Supabase’s Paris region, so your data stays in Morocco and the EU. Data is encrypted in transit; there is no end-to-end encryption of message content. We follow Moroccan law 09-08 expectations for personal data."
       },
       {
         "q": "Which numbers can I connect?",
