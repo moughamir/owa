@@ -50,14 +50,25 @@ const str = (value: string | undefined | void): string | undefined =>
 const reader = (c: HeaderReader): ((name: string) => string | undefined) =>
   (name) => str(c.req.header(name));
 
+/**
+ * Validated config from values config/env.ts has already parsed: bogus hops (non-integer or
+ * negative) fall back to the 1-hop default. One validation point shared by app.ts and oauth.ts.
+ */
+export function clientIpConfigFor(
+  trustedProxyHops: number,
+  trustCfConnectingIp = false,
+): ClientIpConfig {
+  return {
+    trustedProxyHops: Number.isInteger(trustedProxyHops) && trustedProxyHops >= 0 ? trustedProxyHops : 1,
+    trustCfConnectingIp,
+  };
+}
+
 export function clientIpConfigFromEnv(
   read: (name: string) => string | undefined = (name) => process.env[name],
 ): ClientIpConfig {
   const raw = Number.parseInt(read('TRUSTED_PROXY_HOPS') ?? '', 10);
-  return {
-    trustedProxyHops: Number.isInteger(raw) && raw >= 0 ? raw : 1,
-    trustCfConnectingIp: read('TRUST_CF_CONNECTING_IP') === '1',
-  };
+  return clientIpConfigFor(raw, read('TRUST_CF_CONNECTING_IP') === '1');
 }
 
 export function clientIpFor(c: HeaderReader, config: ClientIpConfig): string {
@@ -91,7 +102,11 @@ function fingerprint(c: HeaderReader): string {
   return createHash('sha256').update(chain).digest('base64url').slice(0, 32);
 }
 
-/** Per-request key used by every rate limiter. Single copy — imported by app.ts and oauth.ts. */
-export function clientIp(c: HeaderReader): string {
-  return clientIpFor(c, clientIpConfigFromEnv());
+/**
+ * Per-request key used by every rate limiter. Single copy — app.ts and oauth.ts both pass
+ * the config they built from config/env.ts (see clientIpConfigFor), so the trust model is
+ * never silently re-derived from raw process.env at a call site.
+ */
+export function clientIp(c: HeaderReader, config: ClientIpConfig): string {
+  return clientIpFor(c, config);
 }

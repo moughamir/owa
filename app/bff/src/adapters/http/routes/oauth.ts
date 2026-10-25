@@ -26,8 +26,10 @@ import type { SecretBox } from '../../../infrastructure/crypto/secret-box.js';
 import { TokenBucketRateLimiter } from '../../../infrastructure/auth/rate-limit.js';
 import { sha256Hex } from './wa.js';
 // Shared with app.ts: trusts only the rightmost TRUSTED_PROXY_HOPS x-forwarded-for
-// entries (see ../client-ip.ts for the trust model); never the leftmost entry.
-import { clientIp } from '../client-ip.js';
+// entries (see ../client-ip.ts for the trust model); never the leftmost entry. The
+// config comes from config/env.ts, validated once by clientIpConfigFor.
+import { clientIp, clientIpConfigFor } from '../client-ip.js';
+import { env } from '../../../config/env.js';
 
 export const ACCESS_TTL_SECONDS = 3600;
 export const REFRESH_TTL_SECONDS = 30 * 24 * 3600;
@@ -168,8 +170,10 @@ async function readParams(c: Context): Promise<Record<string, string>> {
 export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new FlowStore()) {
   const issuer = deps.publicApiUrl.replace(/\/$/, '');
   const limiter = new TokenBucketRateLimiter();
+  // Same client-IP trust model as app.ts, fed from config/env.ts.
+  const clientIpCfg = clientIpConfigFor(env.trustedProxyHops, env.trustCfConnectingIp);
   const limited = async (c: Context, bucket: string, limit: number) =>
-    !(await limiter.isAllowed(`${bucket}:${clientIp(c)}`, limit, 60));
+    !(await limiter.isAllowed(`${bucket}:${clientIp(c, clientIpCfg)}`, limit, 60));
 
   const resourceMetadata = {
     resource: canonicalResource(issuer),

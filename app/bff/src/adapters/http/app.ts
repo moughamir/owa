@@ -8,7 +8,8 @@ import { HTTPException } from 'hono/http-exception';
 import { CodedHTTPException } from './errors.js';
 // Client IP for rate limiting, shared with routes/oauth.ts: trusts only the rightmost
 // TRUSTED_PROXY_HOPS x-forwarded-for entries (see ./client-ip.ts for the trust model).
-import { clientIp } from './client-ip.js';
+// The config comes from config/env.ts, validated once by clientIpConfigFor.
+import { clientIp, clientIpConfigFor } from './client-ip.js';
 import { logger } from 'hono/logger';
 import { cors } from 'hono/cors';
 import { createAuthMiddleware } from '../../infrastructure/auth/middleware.js';
@@ -108,6 +109,8 @@ export function createApp(deps: AppDeps) {
   const authLimit = deps.authRateLimit ?? { limit: 10, windowSeconds: 60 };
   const waitlistLimit = deps.waitlistRateLimit ?? { limit: 5, windowSeconds: 60 };
   const apiLimit = deps.rateLimit ?? { limit: env.rateLimitDefault, windowSeconds: env.rateLimitWindowSeconds };
+  // Same client-IP trust model for every per-IP rate limiter below, fed from config/env.ts.
+  const clientIpCfg = clientIpConfigFor(env.trustedProxyHops, env.trustCfConnectingIp);
 
   // Global middleware
   app.use('*', logger());
@@ -129,7 +132,7 @@ export function createApp(deps: AppDeps) {
   // Public auth (sign-up / login / refresh): throttled per client IP, no bearer token
   app.use('/auth/*', async (c, next) => {
     const allowed = await rateLimiter.isAllowed(
-      `auth:${clientIp(c)}`,
+      `auth:${clientIp(c, clientIpCfg)}`,
       authLimit.limit,
       authLimit.windowSeconds,
     );
@@ -147,7 +150,7 @@ export function createApp(deps: AppDeps) {
   if (deps.waitlist) {
     app.use('/waitlist', async (c, next) => {
       const allowed = await rateLimiter.isAllowed(
-        `waitlist:${clientIp(c)}`,
+        `waitlist:${clientIp(c, clientIpCfg)}`,
         waitlistLimit.limit,
         waitlistLimit.windowSeconds,
       );
