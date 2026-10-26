@@ -89,12 +89,12 @@ gh api --paginate "repos/$UPSTREAM_REPO/releases?per_page=50" \
   --jq ".[]
     | select(.draft != true)
     | select($pre_filter)
-    | [.tag_name, (.name // \"\"), .html_url, .created_at, (.body // \"\")] | @tsv" \
+    | [.tag_name, (.name // \"\"), .html_url, (.body // \"\")] | @tsv" \
   | tac >"$releases_tsv"
 
 new_rel=0
 sec_rel=0
-while IFS=$'\t' read -r tag name html_url created_at body; do
+while IFS=$'\t' read -r tag name html_url body; do
   [ -n "$tag" ] || continue
   # @tsv escapes newlines as literal "\n"; restore them so the Security-heading
   # grep works line-wise and the issue body renders as markdown, not "\n" text.
