@@ -6,6 +6,15 @@ on:
   pull_request:
 
 jobs:
+  upstream-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true # OpenWA/openapi.json at the pinned tag
+          fetch-depth: 1
+      - run: node scripts/check-upstream-surface.mjs
+
   bff:
     runs-on: ubuntu-latest
     defaults:

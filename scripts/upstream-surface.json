@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "comment": [
+    "WF-014: routes the WaFine BFF depends on, in OpenAPI path notation.",
+    "Source of truth: OpenWA/openapi.json at the pinned submodule tag.",
+    "Derived from app/bff/src/infrastructure/gateway/openwa-http-client.ts.",
+    "The /wa/ passthrough (gateway-proxy.ts) exposes more routes to tenants than",
+    "the BFF itself calls; extend this list if a tenant-critical route changes."
+  ],
+  "routes": [
+    "GET /api/sessions",
+    "GET /api/sessions/{sessionId}",
+    "POST /api/sessions",
+    "GET /api/sessions/{sessionId}/qr",
+    "POST /api/sessions/{sessionId}/start",
+    "POST /api/sessions/{sessionId}/logout",
+    "DELETE /api/sessions/{sessionId}",
+    "POST /api/auth/api-keys",
+    "POST /api/auth/api-keys/{id}/revoke",
+    "POST /api/sessions/{sessionId}/messages/send-text",
+    "POST /api/sessions/{sessionId}/messages/send-image",
+    "POST /api/sessions/{sessionId}/messages/send-video",
+    "POST /api/sessions/{sessionId}/messages/send-audio",
+    "POST /api/sessions/{sessionId}/messages/send-document",
+    "POST /api/sessions/{sessionId}/messages/send-sticker",
+    "GET /api/health",
+    "GET /api/health/ready"
+  ]
+}
