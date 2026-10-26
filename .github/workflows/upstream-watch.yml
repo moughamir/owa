@@ -1,0 +1,32 @@
+# WF-015: same-day rebase on upstream OpenWA releases that carry a Security
+# changelog section, and a consolidated advisory issue while the submodule pin
+# sits below the baseline tag. The `scripts/upstream-watch` script keeps its
+# state as issue labels, so every run is idempotent.
+name: upstream-watch
+
+on:
+  schedule:
+    - cron: "0 6 * * *" # 06:00 UTC daily; Actions schedules can lag past this
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true # pin tag: git -C OpenWA describe --tags
+          # shallow is enough: only the tag name is read, not the whole tree
+          fetch-depth: 1
+      - name: Watch upstream releases and advisories
+        run: ./scripts/upstream-watch
+        env:
+          GH_TOKEN: ${{ github.token }}
