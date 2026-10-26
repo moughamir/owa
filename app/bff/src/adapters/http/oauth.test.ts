@@ -352,7 +352,9 @@ describe('refresh rotation, reuse detection, revocation', () => {
   it('RFC 7009 revoke ends the connection; deleting the session kills connector keys too', async () => {
     const { tokens } = await connected();
     const at = tokens['access_token']!;
-    expect((await app.request('/oauth/revoke', revokeForm({ token: at }, at))).status).toBe(200);
+    // Revoke using the access token as bearer to revoke the refresh token —
+    // the bearer must differ from the token field (prevents self-revocation via a leak).
+    expect((await app.request('/oauth/revoke', revokeForm({ token: tokens['refresh_token']! }, at))).status).toBe(200);
     expect((await mcp(at)).status).toBe(401);
 
     const again = await connected();
@@ -373,6 +375,9 @@ describe('refresh rotation, reuse detection, revocation', () => {
     await ensureAlive();
     // unknown token as bearer
     expect((await app.request('/oauth/revoke', revokeForm({ token: at }, 'wao_at_nope'))).status).toBe(401);
+    await ensureAlive();
+    // using the same access token as both bearer and revoked body token → 403
+    expect((await app.request('/oauth/revoke', revokeForm({ token: at }, at))).status).toBe(403);
     await ensureAlive();
   });
 
@@ -452,12 +457,13 @@ describe('refresh rotation, reuse detection, revocation', () => {
   it('mismatched client_id does not revoke the connection', async () => {
     const { clientId, tokens } = await connected();
     const at = tokens['access_token']!;
-    expect((await app.request('/oauth/revoke', revokeForm({ token: at, client_id: 'owa_c_other' }, at))).status).toBe(200);
+    // Use access token as bearer to revoke the refresh token (bearer must differ from token field)
+    expect((await app.request('/oauth/revoke', revokeForm({ token: tokens['refresh_token']!, client_id: 'owa_c_other' }, at))).status).toBe(200);
     // wrong client_id: no action, connection still alive
     expect((await mcp(at)).status).toBe(200);
     // matching client_id: whole connection ends
     const { clientId: id2, tokens: t2 } = await connectAgain();
-    expect((await app.request('/oauth/revoke', revokeForm({ token: t2['access_token']!, client_id: id2 }, t2['access_token']!))).status).toBe(200);
+    expect((await app.request('/oauth/revoke', revokeForm({ token: t2['refresh_token']!, client_id: id2 }, t2['access_token']!))).status).toBe(200);
     expect((await mcp(t2['access_token']!)).status).toBe(401);
     expect(clientId).not.toBe(id2);
   });

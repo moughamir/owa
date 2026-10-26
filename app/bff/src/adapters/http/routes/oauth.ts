@@ -300,9 +300,10 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
   async function resolveBearer(c: Context) {
     const authz = c.req.header('authorization');
     if (!authz || !/^Bearer\s+/i.test(authz)) return null;
-    const t = await deps.oauth.findToken(sha256Hex(authz.replace(/^Bearer\s+/i, '')));
+    const raw = authz.replace(/^Bearer\s+/i, '');
+    const t = await deps.oauth.findToken(sha256Hex(raw));
     if (!(t && t.kind === 'access' && t.expiresAt.getTime() > Date.now())) return null;
-    return t;
+    return { token: t, hash: sha256Hex(raw) };
   }
 
   // ── Token endpoint ──
@@ -376,6 +377,11 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
   // `token` value alone can no longer end a connection — only the resource owner, holding
   // that connection's own valid bearer, can (RFC 7009 §5.2 authorization). Client auth
   // stays "none" (public clients carry no secret); the bearer is the authorization.
+  //
+  // The bearer must be a DIFFERENT token from the one in the `token` field: a leaked
+  // access token must not be able to revoke itself. The legitimate client always holds
+  // the other token of the same grant (access for MCP calls, refresh for rotation), so
+  // present the access token as bearer to revoke the refresh token — or vice versa.
   // Authentication is checked before body validation (RFC 6749 §5.2): a dead bearer is
   // 401 with a challenge. As before, `token` is REQUIRED (§2.1), and a token that is
   // unknown or belongs to another connection is answered 200 without acting — revoking
@@ -390,8 +396,15 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
     }
     const p = await readParams(c);
     if (!p['token']) return oauthError(c, 400, 'invalid_request', 'token parameter required');
-    const t = await deps.oauth.findToken(sha256Hex(p['token']));
-    if (t && t.grantId === presented.grantId && (!p['client_id'] || p['client_id'] === t.clientId)) {
+    const targetHash = sha256Hex(p['token']);
+    // The bearer must not be the same token as the one being revoked — a leaked access
+    // token cannot revoke itself; the caller must present an independent credential.
+    if (presented.hash === targetHash) {
+      c.header('Cache-Control', 'no-store');
+      return c.json({ error: 'invalid_request', error_description: 'Bearer must differ from the token being revoked' }, 403);
+    }
+    const t = await deps.oauth.findToken(targetHash);
+    if (t && t.grantId === presented.token.grantId && (!p['client_id'] || p['client_id'] === t.clientId)) {
       await revokeAtEngine(await deps.oauth.revokeGrant(t.grantId));
     }
     c.header('Cache-Control', 'no-store');
