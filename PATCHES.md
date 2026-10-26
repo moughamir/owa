@@ -38,6 +38,25 @@ maintained and only inert when no plugins run):
 `src/modules/queue` (`IngressJobData` type import). A later patch may slim `core/plugins`
 itself once the plugin runtime is confirmed unnecessary for WaFine.
 
+### Patch 2 — fork-safe release publishing (ghcr.io only)
+
+Upstream `release.yml` dual-publishes the release image to GHCR **and** Docker Hub
+(`docker.io/rmyndharis/openwa`), where the Docker Hub login hard-requires the
+`DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets; without them the `promote` job fails before any
+release tag is applied, so the image would never leave the staging tag. The fork publishes one
+registry only:
+
+- `docker` job metadata `images:` lists `ghcr.io/${{ github.repository }}` (no Docker Hub image).
+- `promote` job: the Docker Hub login step is removed (the tag loop consumes the metadata tag set
+  unmodified, so what it re-points is exactly what was built and boot-smoke-tested).
+- `cleanup-staging`: the packages API path now derives the container name from
+  `GITHUB_REPOSITORY` (lowercased — `owa`), instead of the upstream-hardcoded `openwa`.
+
+Also re-recorded here: the `v0.25.0` tag on the mirrors is re-pointed to carry this patch, so the
+published image is built from the tag content itself, passing through upstream's whole release
+gate (lint/test/test-postgres/dashboard/build → docker → boot-smoke both archs → trivy scan →
+promote → verify-published → GitHub Release with changelog notes).
+
 ### Consequences for API consumers
 
 - The engine's `/api/templates` CRUD and `/sessions/{id}/messages/send-template` are gone from
@@ -72,7 +91,7 @@ Mechanical checklist upstream each release (same shape as WF- procedures):
 
 ## Deferred patches (tracked in WF-013 comment thread)
 
-2. Docker/Infra module slimming — heavy infra surgery, deferred.
-3. Dashboard build skip (affects images only, not compile).
-4. Single engine (Baileys-only?). Intended but requires runtime session journeys to vet.
-5. Keys-in-data-DB (moves api-key rows out of main.sqlite into the pluggable data store).
+- Docker/Infra module slimming — heavy infra surgery, deferred.
+- Dashboard build skip (affects images only, not compile).
+- Single engine (Baileys-only?). Intended but requires runtime session journeys to vet.
+- Keys-in-data-DB (moves api-key rows out of main.sqlite into the pluggable data store).

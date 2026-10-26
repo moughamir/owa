@@ -495,11 +495,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
-          # Both registries the promote job tags. Computed once here and handed to promote /
+          # Fork (WaFine): the only registry this repo publishes is GHCR under its own identity;
+          # upstream also tags Docker Hub (docker.io/rmyndharis/openwa), which needs the
+          # DOCKERHUB_* secrets a fork does not carry. Computed once here and handed to promote /
           # verify-published via job outputs, so the promoted set cannot drift from the build.
           images: |
             ghcr.io/${{ github.repository }}
-            docker.io/rmyndharis/openwa
           tags: |
             type=semver,pattern={{version}}
             # The mutable channels (X.Y, latest) are disabled for prereleases, meaning any tag with
@@ -701,9 +702,10 @@ jobs:
           trivyignores: .trivyignore
 
   # Applies the release tags (X.Y.Z — plus X.Y and latest for non-prereleases) to the image
-  # boot-smoke just proved can start, on BOTH registries (GHCR + Docker Hub — the tag set computed
-  # once by the docker job's metadata-action covers both, and arrives here via job outputs, so the
-  # promoted set is by construction the build's own tag set, never a re-derived pattern).
+  # boot-smoke just proved can start. Fork (WaFine): GHCR is the only registry (see the docker
+  # job's metadata note). The tag set computed once by the docker job's metadata-action arrives
+  # here via job outputs, so the promoted set is by construction the build's own tag set, never a
+  # re-derived pattern.
   # `imagetools create` re-points tags at the existing manifest list without rebuilding, so the
   # promoted image is bit-identical to the one tested on both registries, and its provenance and
   # SBOM attestations travel with it. Before re-pointing anything, the job records a signed
@@ -731,14 +733,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Dual-publish: the same boot-tested manifest is also tagged on Docker Hub, where the public
-      # pull count lives (GHCR exposes no download metrics). Requires the DOCKERHUB_USERNAME /
-      # DOCKERHUB_TOKEN repo secrets; without them this step fails before any tag is applied.
-      - name: Login to Docker Hub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Fork (WaFine): upstream dual-publishes to Docker Hub (public pull count lives there);
+      # that login needs the DOCKERHUB_USERNAME/DOCKERHUB_TOKEN secrets, which a fork does not
+      # carry, and the step would fail before any tag is applied. The metadata above therefore
+      # lists ghcr.io only and the login step is removed — the promote loop below consumes the
+      # tag set unmodified.
 
       - name: Resolve the image name to attest
         id: image
@@ -854,7 +853,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           staging="smoke-${{ github.run_id }}"
-          version_json=$(gh api "/users/${{ github.repository_owner }}/packages/container/openwa/versions" \
+          # Fork (WaFine): the package name on GHCR is the repository name lowercased (owa), not
+          # the hardcoded "openwa" this step carried upstream.
+          package="${GITHUB_REPOSITORY##*/}"; package="${package,,}"
+          version_json=$(gh api "/users/${{ github.repository_owner }}/packages/container/$package/versions" \
             --jq ".[] | select(.metadata.container.tags[]? == \"$staging\") | {id, tags: .metadata.container.tags}" | head -1)
           if [ -z "$version_json" ]; then
             echo "staging tag not found (docker job failed before pushing, or already cleaned up)"
@@ -864,7 +866,7 @@ jobs:
           tags=$(printf '%s' "$version_json" | jq -r '.tags | join(",")')
           tag_count=$(printf '%s' "$version_json" | jq -r '.tags | length')
           if [ "$tag_count" = "1" ]; then
-            gh api -X DELETE "/users/${{ github.repository_owner }}/packages/container/openwa/versions/$version_id" \
+            gh api -X DELETE "/users/${{ github.repository_owner }}/packages/container/$package/versions/$version_id" \
               && echo "removed staging-only version $version_id"
           else
             echo "keeping version $version_id — the release tags share it (tags: $tags)."
