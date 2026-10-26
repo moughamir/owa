@@ -1,0 +1,177 @@
+#!/usr/bin/env bash
+# WF-015: watch rmyndharis/OpenWA releases and known GHSAs.
+#
+# State is issue-based, so the script is safe to run repeatedly:
+#   - every upstream release NEWER than the OpenWA submodule pin gets exactly one
+#     tracking issue, labelled `upstream:<tag>` (label lookup is the state);
+#   - releases whose changelog has a Security section additionally get the
+#     `upstream-security` label and a same-day-rebase note (fork-proposal option A);
+#   - the three baseline GHSAs (issue #83 body) are checked against the pin.
+#     Their fixes all landed in upstream v0.25.0, so with the pin below v0.25.0 the
+#     watch opens one consolidated advisory issue; raising the pin (WF-013) clears it.
+#
+# Usage: scripts/upstream-watch [--check]
+#   --check  print what would be created, create nothing (local runs, and CI smoke)
+#
+# Env (all optional):
+#   UPSTREAM_REPO              default rmyndharis/OpenWA
+#   WF15_GHSAS                 space-separated GHSAs, default: the issue #83 baseline
+#   WF15_BASELINE_TAG          tag that closes all WF15_GHSAS, default v0.25.0
+#   WF15_MAX_NEW_ISSUES        cap on non-security tracking issues opened per run, default 5
+#   WF15_INCLUDE_PRERELEASES   1 to track prereleases too, default 0
+set -euo pipefail
+
+UPSTREAM_REPO="${UPSTREAM_REPO:-rmyndharis/OpenWA}"
+GHSAS="${WF15_GHSAS:-GHSA-6qxp-vccf-f47h GHSA-wq5f-xc86-pv6w GHSA-jqcg-44mw-7w3h}"
+BASELINE_TAG="${WF15_BASELINE_TAG:-v0.25.0}"
+MAX_NEW="${WF15_MAX_NEW_ISSUES:-5}"
+INCLUDE_PRE="${WF15_INCLUDE_PRERELEASES:-0}"
+CHECK=0
+[ "${1:-}" != "--check" ] || CHECK=1
+
+need() { command -v "$1" >/dev/null 2>&1 || { printf 'upstream-watch: missing %s\n' "$1" >&2; exit 1; }; }
+need gh
+need jq
+
+summary() { # append to GITHUB_STEP_SUMMARY when in CI, always to stderr
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    printf '%s\n' "$*" >>"$GITHUB_STEP_SUMMARY"
+  fi
+  printf 'upstream-watch: %s\n' "$*" >&2
+}
+
+self_repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
+
+# Pin = OpenWA submodule version (tag when the clone has it, else "unknown").
+repo_root="$(git rev-parse --show-toplevel)"
+pin="$(git -C "$repo_root/OpenWA" describe --tags 2>/dev/null \
+  || sed -n 's/.*(\(v[0-9][0-9.]*\)).*/\1/p' <<<"$(git -C "$repo_root" submodule status OpenWA 2>/dev/null)" \
+  || true)"
+pin="${pin:-unknown}"
+summary "pinned OpenWA: ${pin}"
+
+semver_ge() { # "true" when $1 >= $2 as vX.Y.Z
+  a="${1#v}"; b="${2#v}"
+  [ "$(printf '%s\n%s\n' "$a" "$b" | sort -V | head -1)" = "$b" ]
+}
+
+semver_gt() { # "true" when $1 > $2 as vX.Y.Z
+  [ "$1" != "$2" ] && semver_ge "$1" "$2"
+}
+
+ensure_label() { # create label, tolerate "already exists" (422); never in --check mode
+  [ "$CHECK" = 1 ] && return 0
+  gh api -X POST "repos/$self_repo/labels" -f name="$1" -f color="${2:-cccccc}" >/dev/null 2>&1 || true
+}
+
+label_exists() {
+  gh api "repos/$self_repo/labels/$1" >/dev/null 2>&1
+}
+
+create_issue() { # $1 title, $2 body, $3.. labels
+  title="$1"; body="$2"; shift 2
+  if [ "$CHECK" = 1 ]; then
+    summary "would create issue: $title"
+    return 0
+  fi
+  gh issue create --repo "$self_repo" --title "$title" --body "$body" "$@" >/dev/null
+}
+
+security_section() { # release body -> exit 0 when a Security section is present
+  printf '%s' "$1" | grep -qiE '^[[:space:]]*(#+[[:space:]]*security|[-*][[:space:]]*security($|[^[:alpha:]]))'
+}
+
+# Releases oldest-first; `--paginate --jq` returns them newest-first, so tac flips.
+releases_tsv="$(mktemp)"
+pre_filter=".prerelease == false"
+[ "$INCLUDE_PRE" = 1 ] || pre_filter="true"
+gh api --paginate "repos/$UPSTREAM_REPO/releases?per_page=50" \
+  --jq ".[]
+    | select(.draft != true)
+    | select($pre_filter)
+    | [.tag_name, (.name // \"\"), .html_url, .created_at, (.body // \"\")] | @tsv" \
+  | tac >"$releases_tsv"
+
+new_rel=0
+sec_rel=0
+while IFS=$'\t' read -r tag name html_url created_at body; do
+  [ -n "$tag" ] || continue
+  # @tsv escapes newlines as literal "\n"; restore them so the Security-heading
+  # grep works line-wise and the issue body renders as markdown, not "\n" text.
+  body="$(printf '%b' "$body")"
+  # Older (or equal) than the pin: already in the submodule, nothing to rebase.
+  if [ "$pin" != unknown ] && ! semver_gt "$tag" "$pin"; then
+    continue
+  fi
+  label="upstream:$tag"
+  if label_exists "$label"; then
+    continue
+  fi
+  if security_section "$body"; then
+    kind=security
+    sec_rel=$((sec_rel + 1))
+  else
+    kind=rebase
+    new_rel=$((new_rel + 1))
+    if [ "$new_rel" -gt "$MAX_NEW" ]; then
+      summary "skip $tag: over WF15_MAX_NEW_ISSUES ($MAX_NEW); raise the pin or re-run"
+      continue
+    fi
+  fi
+  rebase_note="rebase the WaFine patch commits onto \`${tag}\` (\`git rebase --onto ${tag} ${pin} <patch-branch>\`) and verify the series is intact with \`git range-diff ${pin}...<old-patch-branch> ${tag}...<new-patch-branch>\`"
+  title="Upstream ${tag}: rebase check (WF-013)"
+  if [ "$kind" = security ]; then
+    title="Upstream SECURITY release ${tag}: same-day rebase required (WF-015)"
+    ensure_label upstream-security e5484d
+  fi
+  body="$(cat <<EOF
+Upstream release [$tag]($html_url) is newer than the pinned OpenWA ($pin).
+
+Rebase checklist (fork-proposal option A):
+- $rebase_note
+- run \`scripts/check-upstream-surface\` (WF-014) against the new tag
+- BFF e2e green before merging the rebuilt engine image
+
+Upstream name: $name
+EOF
+)"
+  create_issue "$title" "$body" "upstream-release"
+  ensure_label upstream-release 0e8a16
+  ensure_label "$label" 767676
+  summary "tracking issue created for ${tag} (${kind})"
+done <"$releases_tsv"
+rm -f "$releases_tsv"
+
+# Baseline GHSAs: with the pin below the closing tag the advisories are still
+# live in the engine, so open one consolidated issue (label-gated: once, not per run).
+advisory_md=""
+for g in $GHSAS; do
+  adv="$(gh api "advisories/$g" 2>/dev/null || true)"
+  [ -n "$adv" ] || { advisory_md+="- $g: not found, check manually"$'\n'; continue; }
+  sev="$(jq -r '.severity' <<<"$adv")"
+  what="$(jq -r '.summary' <<<"$adv")"
+  advisory_md+="- **$g** ($sev): $what"$'\n'
+done
+
+baseline_ok=0
+if [ "$pin" != unknown ] && semver_ge "$pin" "$BASELINE_TAG"; then
+  baseline_ok=1
+fi
+if [ "$baseline_ok" != 1 ] && ! label_exists upstream-advisory; then
+  title="OpenWA advisory baseline unmet at ${pin}: upgrade to ${BASELINE_TAG}+ (WF-015)"
+  body="$(cat <<EOF
+The OpenWA submodule is pinned at \`${pin}\`, below \`${BASELINE_TAG}\`, so these advisories are still live in the engine:
+
+$advisory_md
+All three are closed upstream in \`${BASELINE_TAG}\` (fork-proposal §C). Fix: land WF-013 (fork at \`${BASELINE_TAG}\`).
+
+Until then: none of the three vulnerable packages is directly reachable from the public network (traffic goes through the BFF on the tailnet only), but the engine still processes tenant-supplied media (sharp) and MCP traffic (MCP SDK) — treat as live risk, not theoretical.
+EOF
+)"
+  create_issue "$title" "$body" "upstream-release,upstream-security,upstream-advisory"
+  ensure_label upstream-advisory d93f0b
+  summary "advisory baseline issue created (pin ${pin} < ${BASELINE_TAG})"
+fi
+
+summary "done (check=$CHECK): $new_rel non-security rebase issue(s), $sec_rel security release(s)"
+exit 0
