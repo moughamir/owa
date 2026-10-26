@@ -4,8 +4,9 @@ import { PGlite } from '@electric-sql/pglite';
 import { drizzle } from 'drizzle-orm/pglite';
 import { eq, inArray } from 'drizzle-orm';
 import * as schema from './schema/index.js';
-import { waitlist as waitlistTable } from './schema/index.js';
+import { allowlistedNumbers as allowlistedTable, waitlist as waitlistTable } from './schema/index.js';
 import { DrizzleWaitlistRepository } from './drizzle-waitlist.js';
+import type { WaitlistBulkDecideResult } from '../../domain/ports/index.js';
 
 // Runs the real migration SQL against an in-process Postgres.
 const MIGRATIONS = [
@@ -170,5 +171,77 @@ describe('DrizzleWaitlistRepository (Postgres semantics)', () => {
     expect(kept).toMatchObject({ email: 'retain@example.com', waNumber: '+212600000042', useCase: 'Keep this', status: 'removed' });
     expect(kept?.removedAt).toBeInstanceOf(Date);
     expect(await repo.events(entry.id)).toMatchObject([{ adminId: ADMIN_ID, action: 'removed', fromStatus: 'pending', toStatus: 'removed' }]);
+  });
+
+  describe('bulkDecide (WF-018 atomicity)', () => {
+    const BULK_NUMBER = '+212610000091';
+    const BULK_NUMBER_2 = '+212610000092';
+
+    const idsOf = async (emails: string[]) => {
+      const page = await repo.list({ limit: 100, offset: 0 });
+      return emails.map((email) => page.entries.find((row) => row.email === email)!.id);
+    };
+    const allowlistPhones = async () =>
+      (await db.select().from(allowlistedTable)).map((row) => row.phoneE164).sort();
+
+    // Keep each case independent: the bulk tests write allowlist rows that this suite never
+    // cleans up implicitly.
+    const resetAllowlist = async () => {
+      await db.delete(allowlistedTable).where(inArray(allowlistedTable.phoneE164, [BULK_NUMBER, BULK_NUMBER_2]));
+    };
+
+    it('invites every pending lead and allowlists the numbers in one transaction', async () => {
+      await resetAllowlist();
+      await repo.add({ email: 'bulk-ok-a@example.com', waNumber: BULK_NUMBER, useCase: null, locale: 'en' });
+      await repo.add({ email: 'bulk-ok-b@example.com', waNumber: '  ' + BULK_NUMBER_2 + ' ', useCase: null, locale: 'en' });
+      const ids = await idsOf(['bulk-ok-a@example.com', 'bulk-ok-b@example.com']);
+
+      const result = await repo.bulkDecide({ ids, adminId: ADMIN_ID, adminEmail: 'admin@example.com', action: 'invite' });
+      expect(result).toEqual({ ok: true, results: ids.map((id) => ({ id, status: 'invited' })) });
+      expect((await repo.get(ids[0]!))?.status).toBe('invited');
+      expect((await repo.get(ids[1]!))?.invitedAt).toBeInstanceOf(Date);
+      expect(await allowlistPhones()).toEqual([BULK_NUMBER, BULK_NUMBER_2]);
+      expect((await repo.events(ids[0]!)).map((event) => [event.adminId, event.action])).toEqual([
+        [ADMIN_ID, 'invited'],
+      ]);
+    });
+
+    it('moves nothing when one lead is missing, not pending, or lacks a number', async () => {
+      await resetAllowlist();
+      await repo.add({ email: 'bulk-hold-a@example.com', waNumber: null, useCase: null, locale: 'en' });
+      await repo.add({ email: 'bulk-hold-b@example.com', waNumber: BULK_NUMBER, useCase: null, locale: 'en' });
+      const ids = await idsOf(['bulk-hold-a@example.com', 'bulk-hold-b@example.com']);
+
+      // Inviting a lead without a number fails the whole batch.
+      let result: WaitlistBulkDecideResult = await repo.bulkDecide({ ids, adminId: ADMIN_ID, adminEmail: 'a@example.com', action: 'invite' });
+      expect(result).toEqual({ ok: false, reason: 'missing_number', id: ids[0]! });
+      expect(await allowlistPhones()).not.toContain(BULK_NUMBER);
+      expect((await repo.get(ids[1]!))?.status).toBe('pending');
+
+      // Rejecting works without numbers even though inviting them would not.
+      result = await repo.bulkDecide({ ids, adminId: ADMIN_ID, adminEmail: 'a@example.com', action: 'reject' });
+      expect(result).toEqual({ ok: true, results: ids.map((id) => ({ id, status: 'rejected' })) });
+
+      // Once decided, a second attempt fails as a conflict and nothing changes again.
+      result = await repo.bulkDecide({ ids, adminId: ADMIN_ID, adminEmail: 'a@example.com', action: 'reject' });
+      expect(result).toEqual({ ok: false, reason: 'conflict', id: ids[0]! });
+      // Validation follows the input order, so the not-pending id is reported before the
+      // appended unknown one; on its own the unknown id is missing.
+      result = await repo.bulkDecide({
+        ids: [...ids, '00000000-0000-4000-8000-000000000009'],
+        adminId: ADMIN_ID,
+        adminEmail: 'a@example.com',
+        action: 'reject',
+      });
+      expect(result).toEqual({ ok: false, reason: 'conflict', id: ids[0]! });
+      result = await repo.bulkDecide({
+        ids: ['00000000-0000-4000-8000-000000000009'],
+        adminId: ADMIN_ID,
+        adminEmail: 'a@example.com',
+        action: 'reject',
+      });
+      expect(result).toEqual({ ok: false, reason: 'not_found', id: '00000000-0000-4000-8000-000000000009' });
+      expect((await repo.events(ids[0]!)).map((event) => event.toStatus)).toEqual(['rejected']);
+    });
   });
 });

@@ -71,7 +71,7 @@ function build(
 ) {
   accounts = new InMemoryAccountsRepository();
   identity = new FakeIdentity();
-  waitlist = new InMemoryWaitlistRepository();
+  waitlist = new InMemoryWaitlistRepository(accounts);
   app = createApp({
     health: new HealthAggregator([]),
     accounts,
@@ -603,6 +603,47 @@ describe('admin waitlist', () => {
     const rejected = await app.request('/api/admin/waitlist/bulk', json({ ids: pendingIds, action: 'reject' }, adminHeaders));
     expect(rejected.status).toBe(200);
     expect((await list(adminHeaders, '?status=rejected')).total).toBe(1);
+  });
+
+  it('keeps the bulk batch atomic: a conflict or a missing number leaves every lead pending', async () => {
+    const adminHeaders = identity.confirmed(ADMIN);
+    await seed('atomic-a@example.com');
+    await seed('atomic-b@example.com', null);
+    const [withNumber, withoutNumber] = (await list(adminHeaders)).entries.filter((entry) =>
+      entry.email.startsWith('atomic-'),
+    );
+
+    // The whole batch is refused upfront because one lead cannot be allowlisted,
+    // so neither lead moves and no number reaches the allowlist.
+    const missingNumber = await app.request(
+      '/api/admin/waitlist/bulk',
+      json({ ids: [withNumber!.id, withoutNumber!.id], action: 'approve' }, adminHeaders),
+    );
+    expect(missingNumber.status).toBe(400);
+    expect(((await missingNumber.json()) as { error: string }).error).toContain('valid number');
+    expect(await accounts.isAllowlisted(NUMBER)).toBe(false);
+    expect((await list(adminHeaders, '?status=pending')).entries.map((entry) => entry.email)).toEqual(
+      expect.arrayContaining(['atomic-a@example.com', 'atomic-b@example.com']),
+    );
+
+    // Deciding the changing lead again: now everything is already invited, so a retry is 409
+    // and it adds no second allowlist row.
+    const approved = await app.request('/api/admin/waitlist/bulk', json({ ids: [withNumber!.id], action: 'approve' }, adminHeaders));
+    expect(approved.status).toBe(200);
+    const retry = await app.request('/api/admin/waitlist/bulk', json({ ids: [withNumber!.id], action: 'approve' }, adminHeaders));
+    expect(retry.status).toBe(409);
+    expect((await accounts.listAllowlist()).filter((entry) => entry.phoneE164 === NUMBER)).toHaveLength(1);
+  });
+
+  it('bulk-actions an unknown ref id with 404, without touching anything', async () => {
+    const adminHeaders = identity.confirmed(ADMIN);
+    await seed('unknown-ref@example.com');
+    const res = await app.request(
+      '/api/admin/waitlist/bulk',
+      json({ ids: ['00000000-0000-4000-8000-000000000009'], action: 'reject' }, adminHeaders),
+    );
+    expect(res.status).toBe(404);
+    expect((await list(adminHeaders, '?status=pending')).total).toBe(1);
   });
 });
 

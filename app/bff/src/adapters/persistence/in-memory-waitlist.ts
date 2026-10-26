@@ -1,5 +1,8 @@
 import type {
+  IAccountsRepository,
   IWaitlistRepository,
+  WaitlistBulkDecideInput,
+  WaitlistBulkDecideResult,
   WaitlistEntry,
   WaitlistEntryInput,
   WaitlistEvent,
@@ -8,6 +11,7 @@ import type {
   WaitlistQuery,
   WaitlistSourceCount,
 } from '../../domain/ports/index.js';
+import { normalizeE164 } from '../../domain/value-objects/phone.js';
 
 /** Non-persistent waitlist: tests, and local dev without DATABASE_URL. */
 export class InMemoryWaitlistRepository implements IWaitlistRepository {
@@ -16,6 +20,13 @@ export class InMemoryWaitlistRepository implements IWaitlistRepository {
   private seq = 0;
   private eventSeq = 0;
   private eventRows: WaitlistEvent[] = [];
+
+  /**
+   * Bulk decisions write the allowlist through the paired accounts store (their in-memory
+   * stand-in for the shared Postgres transaction), so the same WF-018 invariant holds:
+   * allowlist and statuses never disagree after a call returns.
+   */
+  constructor(private readonly accounts?: IAccountsRepository) {}
 
   /** Not on the port: lets tests assert what was stored. */
   all(): WaitlistEntry[] {
@@ -121,5 +132,36 @@ export class InMemoryWaitlistRepository implements IWaitlistRepository {
     entry.status = 'pending';
     this.recordEvent(id, adminId, 'reopened', 'rejected', 'pending');
     return true;
+  }
+
+  async bulkDecide(input: WaitlistBulkDecideInput): Promise<WaitlistBulkDecideResult> {
+    const { ids, adminId, adminEmail, action } = input;
+    if (action === 'invite' && !this.accounts) {
+      throw new Error('bulk invite needs the paired accounts repository for the allowlist');
+    }
+    // Validation pass first (the transaction stand-in): if anything fails, nothing mutates.
+    const batch = ids.map((id) => {
+      const entry = this.entries.get(id);
+      if (!entry) return { id, entry: null, phone: null, failure: 'not_found' as const };
+      if (entry.status !== 'pending') return { id, entry: null, phone: null, failure: 'conflict' as const };
+      const phone = entry.waNumber ? normalizeE164(entry.waNumber) : null;
+      if (action === 'invite' && !phone) return { id, entry: null, phone: null, failure: 'missing_number' as const };
+      return { id, entry, phone, failure: null };
+    });
+    const failed = batch.find((item) => item.failure);
+    if (failed) return { ok: false, reason: failed.failure!, id: failed.id };
+
+    // Post-validation, mutations cannot fail, so the atomicity claim holds in memory too.
+    const now = new Date();
+    const toStatus = action === 'invite' ? ('invited' as const) : ('rejected' as const);
+    if (action === 'invite') {
+      for (const item of batch) await this.accounts!.addAllowlisted(item.phone!, adminEmail);
+    }
+    for (const item of batch) {
+      item.entry!.status = toStatus;
+      if (action === 'invite') item.entry!.invitedAt = now;
+      this.recordEvent(item.id, adminId, toStatus, 'pending', toStatus);
+    }
+    return { ok: true, results: batch.map((item) => ({ id: item.id, status: toStatus })) };
   }
 }

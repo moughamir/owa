@@ -1,6 +1,8 @@
-import { and, asc, count, desc, eq, ilike, isNotNull, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import type {
   IWaitlistRepository,
+  WaitlistBulkDecideInput,
+  WaitlistBulkDecideResult,
   WaitlistEntry,
   WaitlistEntryInput,
   WaitlistEvent,
@@ -10,8 +12,9 @@ import type {
   WaitlistStatus,
   WaitlistSourceCount,
 } from '../../domain/ports/index.js';
+import { normalizeE164 } from '../../domain/value-objects/phone.js';
 import type { Db } from './client.js';
-import { waitlist, waitlistEvents } from './schema/index.js';
+import { allowlistedNumbers, waitlist, waitlistEvents } from './schema/index.js';
 
 export class DrizzleWaitlistRepository implements IWaitlistRepository {
   constructor(private readonly db: Db) {}
@@ -129,5 +132,59 @@ export class DrizzleWaitlistRepository implements IWaitlistRepository {
 
   reopen(id: string, adminId: string): Promise<boolean> {
     return this.transition(id, adminId, 'reopened', ['rejected'], 'pending');
+  }
+
+  async bulkDecide(input: WaitlistBulkDecideInput): Promise<WaitlistBulkDecideResult> {
+    const { ids, adminId, adminEmail, action } = input;
+    const toStatus: WaitlistStatus = action === 'invite' ? 'invited' : 'rejected';
+    const eventAction: WaitlistEventAction = action === 'invite' ? 'invited' : 'rejected';
+    return this.db.transaction(async (tx) => {
+      // Lock every row up front, all-or-nothing: a concurrent single invite on any of the
+      // ids blocks until this commits, so mid-batch validation cannot be raced.
+      const rows = await tx
+        .select({ id: waitlist.id, status: waitlist.status, waNumber: waitlist.waNumber })
+        .from(waitlist)
+        .where(inArray(waitlist.id, [...ids]))
+        .for('update');
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const phones: { id: string; phone: string }[] = [];
+      for (const id of ids) {
+        const row = byId.get(id);
+        if (!row) return { ok: false, reason: 'not_found' as const, id };
+        if (row.status !== 'pending') return { ok: false, reason: 'conflict' as const, id };
+        if (action === 'invite') {
+          const phone = normalizeE164(row.waNumber ?? '');
+          if (!phone) return { ok: false, reason: 'missing_number' as const, id };
+          phones.push({ id, phone });
+        }
+      }
+
+      if (action === 'invite') {
+        // The allowlist is what sign-up checks; it moves in the same transaction as the
+        // statuses (accounts.addAllowlisted commits independently and cannot be part of
+        // one unit of work from the route, so this write lives here — WF-018).
+        await tx
+          .insert(allowlistedNumbers)
+          .values(phones.map(({ phone }) => ({ phoneE164: phone, addedBy: adminEmail })))
+          .onConflictDoNothing();
+      }
+
+      await tx
+        .update(waitlist)
+        .set({ status: toStatus, ...(action === 'invite' ? { invitedAt: new Date() } : {}) })
+        .where(inArray(waitlist.id, [...ids]));
+
+      await tx.insert(waitlistEvents).values(
+        ids.map((id) => ({
+          waitlistId: id,
+          adminId,
+          action: eventAction,
+          fromStatus: 'pending' as WaitlistStatus,
+          toStatus,
+        })),
+      );
+
+      return { ok: true, results: ids.map((id) => ({ id, status: toStatus as 'invited' | 'rejected' })) };
+    });
   }
 }
