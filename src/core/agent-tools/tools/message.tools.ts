@@ -379,34 +379,6 @@ export function messageTools(message: MessageService): AnyToolDescriptor[] {
         }),
     }),
     defineTool({
-      name: 'MessageSendTemplate',
-      chatScope: ['chatId'],
-      description:
-        'Render a stored text template and send it as a text message. Provide either templateId or templateName. Requires OPERATOR role.',
-      tier: 'write',
-      requiredRole: ApiKeyRole.OPERATOR,
-      sessionScoped: true,
-      inputSchema: z.object({
-        sessionId,
-        chatId: chatIdSchema.describe('Chat JID'),
-        templateId: z.string().optional().describe('Template UUID'),
-        templateName: z.string().optional().describe('Template name slug'),
-        vars: z
-          .record(z.string(), z.string())
-          .optional()
-          .describe('Variables to substitute into {{placeholder}} tokens'),
-        mentions: mentionsSchema,
-      }),
-      handler: input =>
-        message.sendTemplate(input.sessionId, {
-          chatId: input.chatId,
-          templateId: input.templateId,
-          templateName: input.templateName,
-          vars: input.vars,
-          mentions: input.mentions,
-        }),
-    }),
-    defineTool({
       name: 'MessageReply',
       chatQuotedAllowed: true,
       chatScope: ['chatId'],

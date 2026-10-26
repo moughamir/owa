@@ -16,7 +16,6 @@ import { Webhook } from '../webhook/entities/webhook.entity';
 import { WebhookOutboxEvent } from '../webhook/entities/webhook-outbox-event.entity';
 import { WebhookDeliveryFailure } from '../webhook/entities/webhook-delivery-failure.entity';
 import { IntegrationDeliveryFailure } from '../integration/entities/integration-delivery-failure.entity';
-import { Template } from '../template/entities/template.entity';
 import { BaileysStoredMessage } from '../../engine';
 import { ChatState } from '../../engine/adapters/baileys-chat-state.entity';
 import { StatusUpdate } from '../status-store/entities/status-update.entity';
@@ -765,7 +764,8 @@ export class SessionEngineControls {
         await manager.delete(ChatState, { sessionId: id });
         await manager.delete(StatusUpdate, { sessionId: id });
         await manager.delete(Webhook, { sessionId: id });
-        await manager.delete(Template, { sessionId: id });
+        // WaFine patch 1: Template rows removed — no stored templates in the fork (table kept
+        // by migrations when a 0.25.0-era backup is imported; sessions FTW cascade on rebuild).
         await manager.delete(BaileysStoredMessage, { sessionId: id });
         await manager.delete(WebhookOutboxEvent, { sessionId: id });
         await manager.delete(WebhookDeliveryFailure, { sessionId: id });

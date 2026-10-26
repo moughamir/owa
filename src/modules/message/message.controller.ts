@@ -18,7 +18,6 @@ import {
   SEND_CONTACT_BODY_EXAMPLES,
   SEND_POLL_BODY_EXAMPLES,
 } from './dto';
-import { SendTemplateMessageDto } from './dto/send-template.dto';
 import {
   SendBulkMessageDto,
   BulkMessageResponseDto,
@@ -222,31 +221,6 @@ export class MessageController {
   @ApiResponse({ status: 503, description: RECIPIENT_LOOKUP_503 })
   async sendText(@Param('sessionId') sessionId: string, @Body() dto: SendTextMessageDto): Promise<MessageResponseDto> {
     return this.messageService.sendText(sessionId, dto);
-  }
-
-  @ChatScoped('fenced')
-  @Post('send-template')
-  @IdempotentSend()
-  @RequireRole(ApiKeyRole.OPERATOR)
-  @ApiOperation({ summary: 'Render a stored text template and send it as a text message' })
-  @ApiParam({ name: 'sessionId', description: 'Session ID' })
-  @ApiResponse({
-    status: 201,
-    description: 'Template rendered and sent',
-    type: MessageResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Session not active or invalid request',
-  })
-  @ApiResponse({ status: 404, description: 'Template not found' })
-  @ApiResponse({ status: 409, description: ENGINE_NOT_READY_409 })
-  @ApiResponse({ status: 503, description: RECIPIENT_LOOKUP_503 })
-  async sendTemplate(
-    @Param('sessionId') sessionId: string,
-    @Body() dto: SendTemplateMessageDto,
-  ): Promise<MessageResponseDto> {
-    return this.messageService.sendTemplate(sessionId, dto);
   }
 
   @ChatScoped('fenced')

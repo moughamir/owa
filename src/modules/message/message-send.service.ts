@@ -8,14 +8,11 @@ import { SessionService } from '../session/session.service';
 import { MessageProjector } from '../session/message-projector.service';
 import { EngineRegistry } from '../../engine/engine-registry.service';
 import { SendTextMessageDto, SendMediaMessageDto, SendAudioMessageDto, MessageResponseDto } from './dto';
-import { SendTemplateMessageDto } from './dto/send-template.dto';
 import { assertBase64WithinMediaCap, stripBase64DataUri } from './media-cap.util';
 import { MediaInput, IWhatsAppEngine, MessageResult } from '../../engine/interfaces/whatsapp-engine.interface';
 import { Message, MessageDirection, MessageStatus } from './entities/message.entity';
 import { HookManager, applySendingGate } from '../../core/hooks';
 import { SendPacingService, countsTowardSendBreaker } from './send-pacing.service';
-import { TemplateService } from '../template/template.service';
-import { renderTemplate } from '../../common/utils/template-render';
 import { createLogger } from '../../common/services/logger.service';
 import { SsrfBlockedError, SSRF_BLOCKED_CLIENT_MESSAGE } from '../../common/security/ssrf-guard';
 import { resolveFeatureFlags } from '../../config/feature-flags';
@@ -25,7 +22,9 @@ import { LidMappingStoreService } from '../../engine/identity/lid-mapping-store.
 import { resolveJidCandidates } from '../../engine/identity/jid-candidates';
 import { isMediaUrl, MEDIA_URL_MESSAGE } from '../../common/media/media-url';
 
-/** Default cap on a rendered template's final text; overridable via TEMPLATE_RENDER_MAX_CHARS. */
+/** Default cap on final text after caller-supplied {{var}} interpolation (bulk sends kept in the
+ * fork). WaFine patch 1 dropped the stored-template CRUD + send-template route; the upstream
+ * template module is at rmyndharis/OpenWA. */
 export const DEFAULT_TEMPLATE_RENDER_MAX_CHARS = 64 * 1024;
 
 /**
@@ -84,7 +83,6 @@ export class MessageSendService {
     private readonly sessionService: SessionService,
     private readonly engines: EngineRegistry,
     private readonly hookManager: HookManager,
-    private readonly templateService: TemplateService,
     // Required, not @Optional: a missing pacing service would silently mean "no pacing", which is
     // the one failure mode this feature must not have. The service itself no-ops when disabled.
     private readonly pacing: SendPacingService,
@@ -247,50 +245,9 @@ export class MessageSendService {
       );
       throw this.toClientFacingError(error);
     } catch (failure) {
-      // HTTP status alone cannot prove whether an engine accepted the message before failing.
+      // HTTP status alone cannot prove whether the engine accepted the message before failing.
       throw markEngineSendFailure(failure);
     }
-  }
-
-  /**
-   * Resolve a stored template, render its body (with optional header/footer
-   * flattened using newlines) using the supplied variables, and delegate to the
-   * existing {@link sendText} path so plugin hooks, persistence, and status
-   * tracking are reused. Throws NotFoundException when the identifier matches
-   * nothing, BadRequestException when neither templateId nor templateName is
-   * given.
-   *
-   * The FINAL rendered text is capped at template.renderMaxChars (default 64 KiB): caller-supplied
-   * variables can inflate a small template unboundedly, so an over-cap render is rejected with a
-   * 400 naming the limit rather than truncated silently or pushed to the engine/DB as-is.
-   */
-  async sendTemplate(sessionId: string, dto: SendTemplateMessageDto): Promise<MessageResponseDto> {
-    const template = await this.templateService.resolve(sessionId, {
-      templateId: dto.templateId,
-      templateName: dto.templateName,
-    });
-
-    const vars = dto.vars ?? {};
-    const segments = [template.header, template.body, template.footer]
-      .filter((segment): segment is string => segment != null && segment.length > 0)
-      .map(segment => renderTemplate(segment, vars));
-    const text = segments.join('\n\n');
-
-    const maxChars =
-      this.configService?.get<number>('template.renderMaxChars', DEFAULT_TEMPLATE_RENDER_MAX_CHARS) ??
-      DEFAULT_TEMPLATE_RENDER_MAX_CHARS;
-    if (text.length > maxChars) {
-      throw new BadRequestException(
-        `Rendered template is ${text.length} characters, over the ${maxChars}-character limit`,
-      );
-    }
-
-    return this.sendText(sessionId, {
-      chatId: dto.chatId,
-      text,
-      mentions: dto.mentions,
-      linkPreview: dto.linkPreview,
-    });
   }
 
   async sendImage(sessionId: string, dto: SendMediaMessageDto): Promise<MessageResponseDto> {

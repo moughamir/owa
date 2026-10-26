@@ -13,7 +13,6 @@ import { createBootDataSource } from './database/pg-boot-migrations';
 import { createMainDataSource, mainConnectionOptions, SQLITE_BUSY_TIMEOUT_MS } from './database/main-connection';
 import { SessionModule } from './modules/session/session.module';
 import { MessageModule } from './modules/message/message.module';
-import { TemplateModule } from './modules/template/template.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -37,30 +36,17 @@ import { StatusModule } from './modules/status/status.module';
 import { MediaModule } from './modules/media/media.module';
 import { StatusStoreModule } from './modules/status-store/status-store.module';
 import { ChatMediaModule } from './modules/chat-media/chat-media.module';
-import { AutomationModule } from './modules/automation/automation.module';
-import { TakeoverModule } from './modules/takeover/takeover.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { HooksModule } from './core/hooks';
 import { PluginsModule } from './core/plugins';
 import { PluginsApiModule } from './modules/plugins/plugins.module';
 import { AgentToolsModule } from './core/agent-tools/agent-tools.module';
-import { IntegrationModule } from './modules/integration/integration.module';
 import { SearchModule } from './modules/search/search.module';
 import { SqlitePermissionsBoot } from './database/sqlite-file-permissions';
 
-// Only import QueueModule if explicitly enabled to avoid Redis connection errors
-const queueModules: Array<Type | DynamicModule> = [];
-if (process.env.QUEUE_ENABLED === 'true') {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const queueModule = require('./modules/queue/queue.module') as {
-    QueueModule: Type;
-  };
-  queueModules.push(queueModule.QueueModule);
-}
-
-// Global message search. Opt-out via SEARCH_ENABLED=false: the module (route + provider + registry)
-// is absent entirely — zero footprint, no DI wiring. Mirrors the queueModules/MCP conditional shape so
-// an opt-out deployment never even loads the search providers. Default is ON for zero-config first boot.
+// WaFine patch 1: QueueModule (durable webhook/ingress queues) is dropped from the
+// fork — WaFine runs QUEUE_ENABLED=false and the upstream module stays at
+// rmyndharis/OpenWA for anyone who needs it back on a non-patch build.
 const searchModules: Array<Type | DynamicModule> = [];
 if (process.env.SEARCH_ENABLED !== 'false') {
   searchModules.push(SearchModule);
@@ -153,11 +139,8 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
             __dirname + '/modules/session/**/*.entity{.ts,.js}',
             __dirname + '/modules/webhook/**/*.entity{.ts,.js}',
             __dirname + '/modules/message/**/*.entity{.ts,.js}',
-            __dirname + '/modules/template/**/*.entity{.ts,.js}',
             __dirname + '/engine/**/*.entity{.ts,.js}',
-            __dirname + '/modules/integration/**/*.entity{.ts,.js}',
             __dirname + '/modules/status-store/**/*.entity{.ts,.js}',
-            __dirname + '/modules/automation/**/*.entity{.ts,.js}',
           ],
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
           logging: configService.get<boolean>('dataDatabase.logging', false),
@@ -272,12 +255,10 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
     StorageModule,
     AuditModule,
     EventsModule, // WebSocket real-time events
-    ...queueModules,
     AuthModule,
     EngineModule,
     SessionModule,
     MessageModule,
-    TemplateModule,
     WebhookModule,
     HealthModule,
     SettingsModule,
@@ -294,12 +275,9 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
     MediaModule, // Server-side media conversion (opt-in)
     StatusStoreModule, // Phase 3: inbound status/story TTL store (24h purge + media persistence)
     ChatMediaModule, // opt-in chat-media archive (retention purge + orphan sweep)
-    AutomationModule, // single-message autoreply rules, evaluated on the inbound dispatch
-    TakeoverModule, // adopts sessions whose holder's lease lapsed (crashed peer / recreated node)
     CatalogModule, // Phase 3: Catalog API (WhatsApp Business)
     PluginsApiModule, // Phase 5: Plugins API
     AgentToolsModule, // Agent-invocable tool registry (protocol-neutral)
-    IntegrationModule, // Integration Fabric: @Public provider-webhook ingress + fast-ack pipeline
     ...searchModules, // Global message search (opt-out via SEARCH_ENABLED=false; default ON)
     ...mcpModules, // MCP Streamable-HTTP server (opt-in via MCP_ENABLED=true)
     ...serveStaticModules, // Bundled dashboard SPA (production single-port setup)

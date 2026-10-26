@@ -18,18 +18,18 @@ import { SessionController } from './session.controller';
 import { WebhookModule } from '../webhook/webhook.module';
 import { StatusStoreModule } from '../status-store/status-store.module';
 import { ChatMediaModule } from '../chat-media/chat-media.module';
-import { AutomationModule } from '../automation/automation.module';
 import { PLUGIN_SESSION_PORT } from '../../core/plugins/plugin-host-ports';
 
 @Module({
-  // WebhookModule/StatusStoreModule/ChatMediaModule/AutomationModule do not import SessionModule
+  // WaFine patch 1: AutomationModule dropped — tenant template CRUD / autoreply rules reach the
+  // engine through the BFF, which does not use them (see /tmp fork PATCHES.md).
+  // WebhookModule/StatusStoreModule/ChatMediaModule do not import SessionModule
   // back, so the dependency is one-directional — no forwardRef() needed.
   imports: [
     TypeOrmModule.forFeature([Session, Message], 'data'),
     WebhookModule,
     StatusStoreModule,
     ChatMediaModule,
-    AutomationModule,
   ],
   controllers: [SessionController],
   providers: [
