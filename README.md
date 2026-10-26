@@ -1,3 +1,8 @@
+> [!NOTE]
+> **This is WaFine's patched fork.** Upstream README below, verbatim. For what this fork carries
+> on top of upstream v0.25.0 (dropped modules, per-release rebase process, license notes), read
+> [README.wafine.md](./README.wafine.md).
+
 <p align="center">
   <img src="docs/logo/openwa_logo.webp" alt="OpenWA Logo" width="200"/>
 </p>
