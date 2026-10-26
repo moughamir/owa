@@ -1,4 +1,17 @@
 {
+  "appStates": {
+    "notFound": {
+      "title": "Page not found",
+      "text": "The page you asked for does not exist or has moved.",
+      "back": "Back to the homepage"
+    },
+    "error": {
+      "title": "Something went wrong",
+      "text": "An unexpected error occurred. You can try again.",
+      "retry": "Try again"
+    },
+    "loading": "Loading…"
+  },
   "common": {
     "skipToContent": "Skip to content",
     "byline": "by Zawia",
