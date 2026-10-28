@@ -1,31 +1,27 @@
-import { getLocale } from 'next-intl/server';
-import { redirect } from 'next/navigation';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 import type { Metadata } from 'next';
+import { OAuthConsent } from '@/components/oauth-consent';
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
 /**
- * Locale redirect for OAuth consent.
+ * Locale-stable OAuth consent at the path the BFF's oauth/authorize redirects to
+ * (/oauth/consent, locale-unaware). Renders 200 directly — no redirect into the
+ * [locale] tree, which next-intl would immediately strip back for the default
+ * locale (a 307 ping-pong inside IdP-framed flows). Locale is read from the
+ * next-intl cookie set by the locale routes, falling back to the default.
  *
- * The BFF redirects here at /oauth/consent (locale-agnostic). This RSC reads
- * the user's preferred locale and 302-redirects to /[locale]/oauth/consent,
- * preserving all query params (request, etc.).
+ * The root layout has no NextIntlClientProvider (it lives in the [locale] layout),
+ * so this page provides one: the consent view navigates via next-intl's useRouter.
  */
-export default async function ConsentRedirect({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const locale = await getLocale();
-  const params = await searchParams;
-  const qs = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined) {
-      const val = Array.isArray(v) ? v[0] : v;
-      if (val) qs.set(k, val);
-    }
-  }
-  redirect(`/${locale}/oauth/consent?${qs.toString()}`);
+export default async function ConsentPage() {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
+  return (
+    <NextIntlClientProvider messages={messages}>
+      <OAuthConsent locale={locale} />
+    </NextIntlClientProvider>
+  );
 }
