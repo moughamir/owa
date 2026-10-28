@@ -21,6 +21,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6-alpha] - 2026-10-28
+
+Consent-surface hotfix train, cut from `develop` at `b511885` (PRs merged after v0.1.5, none of them feature/stub content; every commit CI-green).
+
+### Fixed
+
+- **WF-005 follow-up (#87): OAuth consent redirect loop** (PR #93, `fix/consent-307-a11y`): `/oauth/consent` now serves 200 directly (locale via the next-intl cookie, EN fallback) instead of 307-ing to `/en/…` and back — locale-stable for IdP frames, a11y e2e unchanged (21/21).
+- **WF-005: OAuth consent 404 for FR/AR users** (#79): the consent fix that unlocked the direct-render above; included in the same consent train.
+- **WF-018: waitlist bulk actions atomic** (#88, PR `fix/bulk-atomic-waitlist`): admin bulk ops no longer partial-fail.
+- **WF-022: error/loading/not-found boundaries** (#89): user-friendly fallbacks instead of raw error screens.
+
+### Added (repo tooling, no user surface)
+
+- WF-014/015 OpenWA upstream surface tracker + release/GHSA watch (#86, #85): CI gate that fails on engine surface drift; consolidated advisory issue stays open until the OpenWA submodule pin moves.
+
 ## [0.1.5-alpha] - 2026-10-24
 
 Built from PRs #74, #75, #76 on `develop`.
