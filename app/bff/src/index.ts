@@ -134,7 +134,7 @@ if (env.databaseUrl) {
   tenancy = new InMemoryWaTenancyRepository();
   oauthRepo = new InMemoryOAuthRepository(tenancy);
   adminRepo = new InMemoryAdminRepository(accounts, tenancy);
-  waitlistRepo = new InMemoryWaitlistRepository();
+  waitlistRepo = new InMemoryWaitlistRepository(accounts);
 }
 if (!env.oauthEncKey) console.warn('OAUTH_ENC_KEY not set: the OAuth server for MCP connectors (Claude) is off');
 for (const raw of env.allowlistSeed) {

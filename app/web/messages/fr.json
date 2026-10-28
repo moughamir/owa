@@ -1,4 +1,17 @@
 {
+  "appStates": {
+    "notFound": {
+      "title": "Page introuvable",
+      "text": "La page demandée n'existe pas ou a été déplacée.",
+      "back": "Retour à la page d'accueil"
+    },
+    "error": {
+      "title": "Un problème est survenu",
+      "text": "Une erreur inattendue s'est produite. Vous pouvez réessayer.",
+      "retry": "Réessayer"
+    },
+    "loading": "Chargement…"
+  },
   "common": {
     "skipToContent": "Aller au contenu principal",
     "byline": "par Zawia",

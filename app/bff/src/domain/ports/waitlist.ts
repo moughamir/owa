@@ -63,6 +63,28 @@ export interface WaitlistSourceCount {
   last7Days: number;
 }
 
+/** One lead decided by a bulk action, with the status it now carries. */
+export type WaitlistBulkDecision = { id: string; status: 'invited' | 'rejected' };
+
+export interface WaitlistBulkDecideInput {
+  /** Distinct lead ids (deduplicated and capped by the route schema). */
+  ids: readonly string[];
+  /** Admin id recorded on each waitlist event. */
+  adminId: string;
+  /** Admin email recorded as `added_by` on the allowlist rows. */
+  adminEmail: string;
+  action: 'invite' | 'reject';
+}
+
+/**
+ * All leads decided, or the reason nothing was. Invariants hold across every id
+ * simultaneously: either all are transitioned (and, when inviting, allowlisted)
+ * or the state is exactly as it was before the call.
+ */
+export type WaitlistBulkDecideResult =
+  | { ok: true; results: WaitlistBulkDecision[] }
+  | { ok: false; reason: 'not_found' | 'conflict' | 'missing_number'; id: string };
+
 export interface IWaitlistRepository {
   /** Idempotent on email: re-submitting an address is accepted and changes nothing. */
   add(entry: WaitlistEntryInput): Promise<void>;
@@ -77,4 +99,13 @@ export interface IWaitlistRepository {
   reject(id: string, adminId: string): Promise<boolean>;
   remove(id: string, adminId: string): Promise<boolean>;
   reopen(id: string, adminId: string): Promise<boolean>;
+  /**
+   * Decides a batch in one transaction: every lead leaves pending together or all stay pending.
+   * The invite path also writes the `allowlisted_numbers` rows inside the same transaction, so
+   * the allowlist can never disagree with the recorded states (WF-018). Inviting requires every
+   * lead to carry a valid E.164 number; rejecting does not. Idempotency note: allowlist inserts
+   * are no-ops for numbers already present, but the status transition happens only when every
+   * lead passed validation, so a failed call leaves nothing behind.
+   */
+  bulkDecide(input: WaitlistBulkDecideInput): Promise<WaitlistBulkDecideResult>;
 }

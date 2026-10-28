@@ -1,0 +1,844 @@
+{
+  "version": 1,
+  "generatedBy": "scripts/check-upstream-surface.mjs",
+  "routes": [
+    {
+      "method": "get",
+      "path": "/api/sessions",
+      "summary": "List all sessions",
+      "pathParams": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [],
+          "properties": {}
+        }
+      }
+    },
+    {
+      "method": "get",
+      "path": "/api/sessions/{sessionId}",
+      "summary": "Get session by ID",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "id",
+            "name",
+            "status",
+            "createdAt",
+            "updatedAt",
+            "engineLoaded"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "pushName": {
+              "type": "string"
+            },
+            "connectedAt": {
+              "type": "string"
+            },
+            "lastActive": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "lastError": {
+              "type": "string"
+            },
+            "restriction": {
+              "type": "object"
+            },
+            "engineLoaded": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions",
+      "summary": "Create a new WhatsApp session",
+      "pathParams": [],
+      "requestBody": {
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "config": {
+            "type": "object"
+          },
+          "proxyUrl": {
+            "type": "string"
+          },
+          "proxyType": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "id",
+            "name",
+            "status",
+            "createdAt",
+            "updatedAt",
+            "engineLoaded"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "pushName": {
+              "type": "string"
+            },
+            "connectedAt": {
+              "type": "string"
+            },
+            "lastActive": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "lastError": {
+              "type": "string"
+            },
+            "restriction": {
+              "type": "object"
+            },
+            "engineLoaded": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "get",
+      "path": "/api/sessions/{sessionId}/qr",
+      "summary": "Get QR code for session authentication",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "qrCode",
+            "status"
+          ],
+          "properties": {
+            "qrCode": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/start",
+      "summary": "Start a session and initialize WhatsApp connection",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "id",
+            "name",
+            "status",
+            "createdAt",
+            "updatedAt",
+            "engineLoaded"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "pushName": {
+              "type": "string"
+            },
+            "connectedAt": {
+              "type": "string"
+            },
+            "lastActive": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "lastError": {
+              "type": "string"
+            },
+            "restriction": {
+              "type": "object"
+            },
+            "engineLoaded": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/logout",
+      "summary": "Log out of WhatsApp (unlinks this device) and stop the session",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "id",
+            "name",
+            "status",
+            "createdAt",
+            "updatedAt",
+            "engineLoaded"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "pushName": {
+              "type": "string"
+            },
+            "connectedAt": {
+              "type": "string"
+            },
+            "lastActive": {
+              "type": "string"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "lastError": {
+              "type": "string"
+            },
+            "restriction": {
+              "type": "object"
+            },
+            "engineLoaded": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "delete",
+      "path": "/api/sessions/{sessionId}",
+      "summary": "Delete a session",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": null,
+      "responses": {}
+    },
+    {
+      "method": "post",
+      "path": "/api/auth/api-keys",
+      "summary": "Create a new API key (admin only)",
+      "pathParams": [],
+      "requestBody": {
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "allowedIps": {
+            "type": "array",
+            "items": "string"
+          },
+          "allowedSessions": {
+            "type": "array",
+            "items": "string"
+          },
+          "allowedChats": {
+            "type": "array",
+            "items": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "id",
+            "name",
+            "keyPrefix",
+            "role",
+            "isActive",
+            "usageCount",
+            "createdAt",
+            "apiKey"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "keyPrefix": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "allowedIps": {
+              "type": "array",
+              "items": "string"
+            },
+            "allowedSessions": {
+              "type": "array",
+              "items": "string"
+            },
+            "allowedChats": {
+              "type": "array",
+              "items": "string"
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "expiresAt": {
+              "type": "string"
+            },
+            "lastUsedAt": {
+              "type": "string"
+            },
+            "usageCount": {
+              "type": "number"
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "apiKey": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/auth/api-keys/{id}/revoke",
+      "summary": "Revoke API key (admin only)",
+      "pathParams": [
+        "id"
+      ],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "id",
+            "name",
+            "keyPrefix",
+            "role",
+            "isActive",
+            "usageCount",
+            "createdAt"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "keyPrefix": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "allowedIps": {
+              "type": "array",
+              "items": "string"
+            },
+            "allowedSessions": {
+              "type": "array",
+              "items": "string"
+            },
+            "allowedChats": {
+              "type": "array",
+              "items": "string"
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "expiresAt": {
+              "type": "string"
+            },
+            "lastUsedAt": {
+              "type": "string"
+            },
+            "usageCount": {
+              "type": "number"
+            },
+            "createdAt": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/messages/send-text",
+      "summary": "Send a text message",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": {
+        "required": [
+          "chatId",
+          "text"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": "string"
+          },
+          "linkPreview": {
+            "type": "boolean"
+          },
+          "customLinkPreview": {
+            "type": null
+          },
+          "quotedMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "messageId",
+            "timestamp"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/messages/send-image",
+      "summary": "Send an image message",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": {
+        "required": [
+          "chatId"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": "string"
+          },
+          "quotedMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "messageId",
+            "timestamp"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/messages/send-video",
+      "summary": "Send a video message",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": {
+        "required": [
+          "chatId"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": "string"
+          },
+          "quotedMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "messageId",
+            "timestamp"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/messages/send-audio",
+      "summary": "Send an audio/voice message",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": {
+        "required": [
+          "chatId"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": "string"
+          },
+          "quotedMessageId": {
+            "type": "string"
+          },
+          "ptt": {
+            "type": "boolean"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "messageId",
+            "timestamp"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/messages/send-document",
+      "summary": "Send a document/file",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": {
+        "required": [
+          "chatId"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": "string"
+          },
+          "quotedMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "messageId",
+            "timestamp"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "post",
+      "path": "/api/sessions/{sessionId}/messages/send-sticker",
+      "summary": "Send a sticker message",
+      "pathParams": [
+        "sessionId"
+      ],
+      "requestBody": {
+        "required": [
+          "chatId"
+        ],
+        "properties": {
+          "chatId": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "base64": {
+            "type": "string"
+          },
+          "mimetype": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "caption": {
+            "type": "string"
+          },
+          "mentions": {
+            "type": "array",
+            "items": "string"
+          },
+          "quotedMessageId": {
+            "type": "string"
+          }
+        }
+      },
+      "responses": {
+        "201": {
+          "required": [
+            "messageId",
+            "timestamp"
+          ],
+          "properties": {
+            "messageId": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "get",
+      "path": "/api/health",
+      "summary": "Basic health check",
+      "pathParams": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "status",
+            "timestamp"
+          ],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    {
+      "method": "get",
+      "path": "/api/health/ready",
+      "summary": "Readiness probe — verifies the auth/audit + data databases respond",
+      "pathParams": [],
+      "requestBody": null,
+      "responses": {
+        "200": {
+          "required": [
+            "status",
+            "details"
+          ],
+          "properties": {
+            "status": {
+              "type": "string"
+            },
+            "details": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

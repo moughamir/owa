@@ -211,23 +211,23 @@ export function adminRoutes(
         throw new HTTPException(400, { message: 'Every lead must have a valid number to approve in bulk.' });
       }
 
-      const results: { id: string; status: 'invited' | 'rejected' }[] = [];
-      for (const entry of found) {
-        if (action === 'approve') {
-          const phone = normalizeE164(entry.waNumber!)!;
-          await accounts.addAllowlisted(phone, c.get('auth').email);
-          if (!(await waitlist.markInvited(entry.id, c.get('auth').userId))) {
-            throw new HTTPException(409, { message: 'A lead changed while the bulk approval was running.' });
-          }
-          results.push({ id: entry.id, status: 'invited' });
-        } else {
-          if (!(await waitlist.reject(entry.id, c.get('auth').userId))) {
-            throw new HTTPException(409, { message: 'A lead changed while the bulk rejection was running.' });
-          }
-          results.push({ id: entry.id, status: 'rejected' });
+      // One transaction decides the whole batch (WF-018): an entry that changed or is missing
+      // fails the call before any other lead is touched, and invite also allowlists in the
+      // same unit of work.
+      const bulk = await waitlist.bulkDecide({
+        ids: found.map((entry) => entry.id),
+        adminId: c.get('auth').userId,
+        adminEmail: c.get('auth').email,
+        action: action === 'approve' ? 'invite' : 'reject',
+      });
+      if (!bulk.ok) {
+        if (bulk.reason === 'not_found') throw new HTTPException(404, { message: `Waitlist entry ${bulk.id} was not found.` });
+        if (bulk.reason === 'missing_number') {
+          throw new HTTPException(400, { message: 'Every lead must have a valid number to approve in bulk.' });
         }
+        throw new HTTPException(409, { message: 'A lead changed while the bulk action was running.' });
       }
-      return c.json({ results });
+      return c.json({ results: bulk.results });
     });
   }
 
