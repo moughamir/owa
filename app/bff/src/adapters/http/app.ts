@@ -251,6 +251,8 @@ export function createApp(deps: AppDeps) {
       // Same rule as the public form: no waitlist storage, no waitlist routes.
       deps.waitlist,
       adminEmails,
+      identity,
+      webUrl,
     ),
   );
 

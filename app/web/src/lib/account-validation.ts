@@ -67,3 +67,42 @@ export function recoveryTokenFromHash(hash: string): string | null {
   const type = params.get('type');
   return token && (type === null || type === 'recovery') ? token : null;
 }
+
+const MAGIC_TYPES = ['magiclink', 'invite', 'signup'] as const;
+export type MagicLinkType = (typeof MAGIC_TYPES)[number];
+
+export type MagicLinkToken =
+  | { kind: 'fragment'; refreshToken: string; type: MagicLinkType }
+  | { kind: 'token_hash'; tokenHash: string; type: MagicLinkType };
+
+/**
+ * The known `type` values of a magic/invite/signup link: null for `recovery` (the reset
+ * page's territory) and other kinds (`email_change`…) this page must not consume.
+ */
+function magicType(raw: string | null): MagicLinkType | null {
+  if (raw === null) return 'magiclink'; // older configs omit the type
+  return (MAGIC_TYPES as readonly string[]).includes(raw) ? (raw as MagicLinkType) : null;
+}
+
+/**
+ * Parse a Supabase magic/invite/signup landing URL into whichever token shape it carries.
+ * `/auth/magic#access_token=…&refresh_token=…&type=…` (implicit flow) or
+ * `/auth/magic?token_hash=…&type=…` (PKCE flow). The fragment wins when both are present;
+ * a link we cannot identify (no token, an `error` redirect, or a type belonging to another
+ * page, e.g. `recovery`) returns null.
+ */
+export function magicLinkFromUrl(url: { hash: string; search: string }): MagicLinkToken | null {
+  const fragment = new URLSearchParams(url.hash.replace(/^#/, ''));
+  const refreshToken = fragment.get('refresh_token');
+  if (refreshToken) {
+    const type = magicType(fragment.get('type'));
+    return type ? { kind: 'fragment', refreshToken, type } : null;
+  }
+  const query = new URLSearchParams(url.search);
+  const tokenHash = query.get('token_hash');
+  if (tokenHash) {
+    const type = magicType(query.get('type'));
+    return type ? { kind: 'token_hash', tokenHash, type } : null;
+  }
+  return null;
+}

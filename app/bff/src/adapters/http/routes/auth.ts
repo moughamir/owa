@@ -1,6 +1,7 @@
 /**
- * Public auth routes (no bearer token): invite-only sign-up, login, refresh, and the
- * forgot-password flow (request a reset link, then set a new password from that link).
+ * Public auth routes (no bearer token): invite-only sign-up, login, refresh, the forgot-password
+ * flow (request a reset link, then set a new password from that link), and the magic-link flow
+ * (e-mail a one-time sign-in link, then exchange its token hash for a session).
  * Sign-up is accepted only for a phone number on the allowlist, and persists the
  * user→number binding that the connect-by-QR step later enforces.
  */
@@ -15,6 +16,7 @@ import type {
 } from '../../../domain/ports/index.js';
 import { normalizeE164 } from '../../../domain/value-objects/phone.js';
 import { canOpenAdmin, effectiveUserRole } from '../../../domain/user-roles.js';
+import { env } from '../../../config/env.js';
 import { CodedHTTPException as AuthError } from '../errors.js';
 import { zJson } from '../validation.js';
 
@@ -35,6 +37,38 @@ const loginBody = z.object({
 const refreshBody = z.object({ refreshToken: z.string().min(1).max(4096) });
 const forgotBody = z.object({ email: z.string().trim().email().max(254) });
 const resetBody = z.object({ accessToken: z.string().min(1).max(4096), password: newPassword });
+
+/**
+ * The `next` page a magic link opens after sign-in. Same-site path only: it must stay inside the
+ * web app, so open redirect tricks are refused by construction — no scheme (`https:`), no
+ * protocol-relative or escaped-slash origin (`//host`, `/\host`), no whitespace/control bytes
+ * that could smuggle a second URL past a sloppy parser.
+ */
+const nextPath = z
+  .string()
+  .max(512)
+  .refine(
+    // No scheme (`https:`), no whitespace, and no control bytes (C0 + DEL) that could
+    // smuggle a second URL past a sloppy header or Location parser.
+    (p) => !/\s/.test(p) && !/^[a-z][a-z0-9+.-]*:/i.test(p),
+    { message: 'next must be a relative in-app path' },
+  )
+  .refine(
+    (p) => ![...p].some((ch) => ch.charCodeAt(0) < 0x20 || ch.charCodeAt(0) === 0x7f),
+    { message: 'next must be a relative in-app path' },
+  )
+  .refine((p) => p.startsWith('/') && !p.startsWith('//') && !p.startsWith('/\\'), {
+    message: 'next must be a relative in-app path',
+  });
+
+const magicBody = z.object({ email: z.string().trim().email().max(254), next: nextPath.optional() });
+
+const magicVerifyBody = z
+  .object({
+    tokenHash: z.string().trim().min(10).max(512),
+    type: z.enum(['magiclink', 'invite', 'signup']).default('magiclink'),
+  })
+  .strict();
 
 export interface AuthRouteDeps {
   accounts: IAccountsRepository;
@@ -136,6 +170,35 @@ export function authRoutes({ accounts, identity, adminEmails, selfService, webUr
   r.post('/refresh', zJson(refreshBody), async (c) => {
     const result = await identity.refresh(c.req.valid('json').refreshToken);
     if (!result) throw new AuthError(401, 'session_expired', 'Session expired, log in again.');
+    return c.json({
+      ...result.tokens,
+      email: result.user.email,
+      isAdmin: await isAdmin(result.user),
+    });
+  });
+
+  // The e-mail lands on ${webUrl}/auth/magic, which POSTs the link's token hash here.
+  const magicUrl = `${(webUrl ?? env.webUrl).replace(/\/$/, '')}/auth/magic`;
+
+  // Same answer whether or not the address has an account (no enumeration), like /forgot.
+  r.post('/magic', zJson(magicBody), async (c) => {
+    const { email, next } = c.req.valid('json');
+    const redirectTo = next ? `${magicUrl}?next=${encodeURIComponent(next)}` : magicUrl;
+    const result = await identity.sendMagicLink(email.toLowerCase(), redirectTo);
+    if (result === 'rate_limited') {
+      throw new AuthError(429, 'rate_limited', 'Too many e-mails sent, try again later.');
+    }
+    return c.json({ status: 'check_inbox' }, 202);
+  });
+
+  // The link's token hash consumes once: an expired or already-used link gets a clear 400, this
+  // time no answer needs to hide the address (the knowledge it protects will be dead anyway).
+  r.post('/magic/verify', zJson(magicVerifyBody), async (c) => {
+    const { tokenHash, type } = c.req.valid('json');
+    const result = await identity.verifyTokenHash(tokenHash, type);
+    if (!result) {
+      throw new AuthError(400, 'magic_link_invalid', 'This link has expired or was already used. Send yourself a new one.');
+    }
     return c.json({
       ...result.tokens,
       email: result.user.email,

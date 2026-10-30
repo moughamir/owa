@@ -363,7 +363,8 @@
       "failed": "Échec de la connexion",
       "invited": "Invité ?",
       "createAccount": "Créer votre compte",
-      "forgot": "Mot de passe oublié ?"
+      "forgot": "Mot de passe oublié ?",
+      "magicTeaser": "M'envoyer un lien à la place"
     },
     "signup": {
       "title": "Créer votre compte",
@@ -400,6 +401,7 @@
       "same_password": "Choisissez un mot de passe différent de l’actuel.",
       "invalid_email": "Saisissez une adresse e-mail valide.",
       "reset_link_invalid": "Ce lien de réinitialisation a expiré ou a déjà servi. Demandez-en un nouveau.",
+      "magic_link_invalid": "Ce lien de connexion a expiré ou a déjà servi. Demandez-en un nouveau.",
       "bootstrap_owner": "Ce compte propriétaire est défini dans la configuration du serveur et ne peut pas être modifié ici."
     },
     "forgot": {
@@ -424,6 +426,19 @@
       "invalidLink": "Ce lien de réinitialisation n’est pas valide ou a expiré.",
       "askAgain": "Demander un nouveau lien",
       "goToLogin": "Aller à la connexion"
+    },
+    "magic": {
+      "title": "Se connecter avec un lien",
+      "intro": "Pas besoin de mot de passe. Nous vous envoyons par e-mail un lien de connexion à votre adresse.",
+      "email": "E-mail",
+      "submit": "M'envoyer le lien",
+      "submitting": "Envoi…",
+      "checkInbox": "Si l'adresse est enregistrée, le lien de connexion est en route. Il expire dans 60 minutes — à usage unique.",
+      "sendAgain": "Le renvoyer",
+      "activating": "Finalisation de la connexion…",
+      "signedIn": "Vous êtes déjà connecté.",
+      "continue": "Continuer",
+      "backToLogin": "Retour à la connexion"
     }
   },
   "messagesPage": {
@@ -470,6 +485,11 @@
     },
     "session": "Session",
     "linkPrompt": "Associez votre numéro invité {phone} pour commencer à envoyer et recevoir des messages.",
+    "claimTitle": "Terminez la configuration de votre numéro",
+    "claimIntro": "Votre invitation a confirmé ce compte. Saisissez le numéro WhatsApp avec lequel vous avez été invité — c'est le numéro que l'assistant utilisera.",
+    "claimNumber": "Numéro WhatsApp",
+    "claimSubmit": "Enregistrer le numéro",
+    "claimSaving": "Enregistrement…",
     "createSession": "Créer la session",
     "linkedNumber": "Numéro associé",
     "qrAlt": "QR code WhatsApp",
@@ -575,6 +595,8 @@
       "phonePlaceholder": "+212 6XX XX XX XX",
       "phoneMissing": "Ce contact n'a laissé aucun numéro — ajoutez-en un au format international pour l'inviter.",
       "phoneInvalid": "Utilisez le format international, ex. +212 6XX XX XX XX.",
+      "invitedEmail": "Invité — l'e-mail d'invitation est en route.",
+      "invitedAllowlistOnly": "Invité, mais l'e-mail d'invitation n'a pas pu être envoyé. Le numéro est sur la liste d'accès ; partagez vous-même le lien d'inscription.",
       "page": "Page {page} sur {pages}",
       "count": "{count, plural, =0 {aucune demande} one {# demande} other {# demandes}}",
       "sourceCountsTitle": "Inscriptions par source",

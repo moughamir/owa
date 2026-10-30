@@ -95,6 +95,37 @@ export async function resetPassword(accessToken: string, password: string): Prom
   await request<{ ok: true }>('/auth/reset', { method: 'POST', body: JSON.stringify({ accessToken, password }) });
 }
 
+/** Magic link: asks the BFF to have Supabase mail a passwordless sign-in link to `/auth/magic`. */
+export async function requestMagicLink(email: string, next?: string | null): Promise<void> {
+  await request<{ status: 'check_inbox' }>('/auth/magic', {
+    method: 'POST',
+    body: JSON.stringify(next ? { email, next } : { email }),
+  });
+}
+
+/** Turns an existing refresh token (e.g. from a Supabase redirect) into a full session. */
+export async function refreshSession(refreshToken: string): Promise<Session> {
+  return toSession(
+    await request<TokenResponse>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+    }),
+  );
+}
+
+/** Exchange a Supabase one-time token hash (the `?token_hash=` link shape) for a session. */
+export async function verifyMagicLinkToken(
+  tokenHash: string,
+  type?: 'magiclink' | 'invite' | 'signup',
+): Promise<Session> {
+  return toSession(
+    await request<TokenResponse>('/auth/magic/verify', {
+      method: 'POST',
+      body: JSON.stringify({ tokenHash, type }),
+    }),
+  );
+}
+
 /** Public waitlist sign-up from the landing page: anonymous, no session, no bearer token. */
 export async function joinWaitlist(input: {
   email: string;
@@ -179,6 +210,10 @@ export interface AllowlistEntry {
 
 export const getMe = () => authed<Me>('/api/me');
 
+/** Pairs the account with the WhatsApp number it was invited for; only allowlisted numbers pass. */
+export const claimPhone = (phone: string) =>
+  authed<{ ok: true; phone: string }>('/api/me/claim', { method: 'POST', body: JSON.stringify({ phone }) });
+
 export const listAllowlist = () =>
   authed<{ entries: AllowlistEntry[] }>('/api/admin/allowlist').then((r) => r.entries);
 
@@ -250,7 +285,7 @@ export const listWaitlist = (params: { status?: WaitlistStatus; search?: string;
 
 /** Invite a lead: the BFF adds the number to the allowlist and marks the entry invited. */
 export const inviteWaitlistEntry = (id: string, phone?: string) =>
-  authed<{ id: string; phone: string; created: boolean; status: WaitlistStatus }>(
+  authed<{ id: string; phone: string; created: boolean; status: WaitlistStatus; emailSent?: boolean }>(
     `/api/admin/waitlist/${encodeURIComponent(id)}/invite`,
     { method: 'POST', body: JSON.stringify(phone ? { phone } : {}) },
   );

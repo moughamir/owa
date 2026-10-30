@@ -33,6 +33,8 @@ class FakeIdentity implements IIdentityProvider, ISelfServiceIdentity {
   revoked = new Set<string>();
   emailResult: EmailChangeResult = 'sent';
   resetResult: 'sent' | 'rate_limited' = 'sent';
+  magicResult: 'sent' | 'rate_limited' = 'sent';
+  inviteResult: 'sent' | 'exists' | 'rate_limited' = 'sent';
 
   async signUp(): Promise<never> {
     throw new Error('unused');
@@ -66,6 +68,18 @@ class FakeIdentity implements IIdentityProvider, ISelfServiceIdentity {
   async sendPasswordReset(email: string, redirectTo: string) {
     this.calls.push(`reset ${email} ${redirectTo}`);
     return this.resetResult;
+  }
+  async sendMagicLink(email: string, redirectTo: string) {
+    this.calls.push(`magic ${email} ${redirectTo}`);
+    return this.magicResult;
+  }
+  async sendInvite(email: string, redirectTo: string, metadata: Record<string, string>) {
+    this.calls.push(`invite ${email} ${redirectTo} ${JSON.stringify(metadata)}`);
+    return this.inviteResult;
+  }
+  async verifyTokenHash(tokenHash: string): Promise<null> {
+    this.calls.push(`verify ${tokenHash}`);
+    return null;
   }
   async signOutAll(token: string) {
     this.calls.push(`signout ${token}`);

@@ -363,7 +363,8 @@
       "failed": "Login failed",
       "invited": "Invited?",
       "createAccount": "Create your account",
-      "forgot": "Forgot password?"
+      "forgot": "Forgot password?",
+      "magicTeaser": "Send me a link instead"
     },
     "signup": {
       "title": "Create your account",
@@ -400,6 +401,7 @@
       "same_password": "Choose a password different from the current one.",
       "invalid_email": "Enter a valid e-mail address.",
       "reset_link_invalid": "This reset link has expired or was already used. Ask for a new one.",
+      "magic_link_invalid": "This sign-in link has expired or was already used. Ask for a new one.",
       "bootstrap_owner": "This owner account is set in the server config and cannot be changed here."
     },
     "forgot": {
@@ -424,6 +426,19 @@
       "invalidLink": "This reset link is not valid or has expired.",
       "askAgain": "Ask for a new link",
       "goToLogin": "Go to login"
+    },
+    "magic": {
+      "title": "Log in with a link",
+      "intro": "No password needed. We email a sign-in link to your address.",
+      "email": "Email",
+      "submit": "Send my link",
+      "submitting": "Sending…",
+      "checkInbox": "If the address is registered, the sign-in link is on its way. It expires in 60 minutes — one use only.",
+      "sendAgain": "Send it again",
+      "activating": "Finishing sign-in…",
+      "signedIn": "You are signed in.",
+      "continue": "Continue",
+      "backToLogin": "Back to login"
     }
   },
   "messagesPage": {
@@ -470,6 +485,11 @@
     },
     "session": "Session",
     "linkPrompt": "Link your invited number {phone} to start sending and receiving messages.",
+    "claimTitle": "Finish setting up your number",
+    "claimIntro": "Your invite confirmed this account. Enter the WhatsApp number you were invited with — it is the number the assistant will use.",
+    "claimNumber": "WhatsApp number",
+    "claimSubmit": "Save number",
+    "claimSaving": "Saving…",
     "createSession": "Create session",
     "linkedNumber": "Linked number",
     "qrAlt": "WhatsApp QR code",
@@ -575,6 +595,8 @@
       "phonePlaceholder": "+212 6XX XX XX XX",
       "phoneMissing": "This lead left no number — add one in international format to invite them.",
       "phoneInvalid": "Use international format, e.g. +212 6XX XX XX XX.",
+      "invitedEmail": "Invited — the invite e-mail is on its way.",
+      "invitedAllowlistOnly": "Invited, but the invite e-mail could not be sent. The number is allowlisted; share the sign-up link yourself.",
       "page": "Page {page} of {pages}",
       "count": "{count, plural, =0 {no leads} one {# lead} other {# leads}}",
       "sourceCountsTitle": "Sign-ups by source",

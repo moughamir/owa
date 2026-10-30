@@ -91,6 +91,9 @@ export type PasswordUpdateResult =
   | { status: 'same_password' }
   | { status: 'invalid_token' };
 
+export type MagicLinkResult = 'sent' | 'rate_limited';
+export type SendInviteResult = 'sent' | 'exists' | 'rate_limited';
+
 /**
  * Self-service calls on the caller's own Supabase Auth user, made with *their* access token
  * (never the service-role key), so an account can only ever change itself.
@@ -113,4 +116,20 @@ export interface IIdentityProvider {
   getUser(accessToken: string): Promise<IdentityUser | null>;
   /** Privileged: remove a user (used to roll back a sign-up that lost the number race). */
   deleteUser(userId: string): Promise<void>;
+  /**
+   * E-mails a sign-in link that consumes into a session without a password. `create_user` is off:
+   * an unregistered address receives the same e-mail bounce as everywhere else, never an account.
+   */
+  sendMagicLink(email: string, redirectTo: string): Promise<MagicLinkResult>;
+  /** E-mails an admin invite that lands on the same magic-link page (the invite signup button). */
+  sendInvite(email: string, redirectTo: string, metadata: Record<string, string>): Promise<SendInviteResult>;
+  /**
+   * Exchanges the token hash of an e-mailed link for a session. Only link types are allowed:
+   * `'recovery'` must NOT be passed here — the reset flow has its own page and endpoint, and
+   * handing out a session for it would turn a password reset into a sign-in.
+   */
+  verifyTokenHash(
+    tokenHash: string,
+    type: 'magiclink' | 'invite' | 'signup',
+  ): Promise<{ tokens: TokenSet; user: IdentityUser } | null>;
 }

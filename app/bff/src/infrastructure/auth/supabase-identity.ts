@@ -9,7 +9,9 @@ import type {
   IIdentityProvider,
   ISelfServiceIdentity,
   IdentityUser,
+  MagicLinkResult,
   PasswordUpdateResult,
+  SendInviteResult,
   SignInResult,
   SignUpResult,
   TokenSet,
@@ -157,6 +159,48 @@ export class SupabaseIdentityProvider implements IIdentityProvider, ISelfService
     const res = await this.call('/logout?scope=global', { bearer: accessToken });
     // 401/403/404: the token is already gone, which is the outcome asked for.
     if (!res.ok && ![401, 403, 404].includes(res.status)) throw new Error(`Supabase sign-out failed: ${res.status}`);
+  }
+
+  /** Same non-enumeration philosophy as sendPasswordReset (only rate limits get a real answer). */
+  async sendMagicLink(email: string, redirectTo: string): Promise<MagicLinkResult> {
+    const res = await this.call(`/otp?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      // `create_user: false`: an address that was never invited gets the e-mail bounce, not an account.
+      body: { email, create_user: false },
+    });
+    if (res.status === 429) return 'rate_limited';
+    const code = res.ok ? '' : await errorCode(res);
+    if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit') return 'rate_limited';
+    // Any other answer is reported as "sent": the caller must not learn whether the address exists.
+    if (!res.ok) console.error('magic link request failed', res.status, code);
+    return 'sent';
+  }
+
+  async sendInvite(email: string, redirectTo: string, metadata: Record<string, string>): Promise<SendInviteResult> {
+    // The invite endpoint is privileged: like deleteUser, it needs the service-role key. Attempts
+    // to invite a subscribed address surface as `exists`, so the admin route can tell them apart.
+    const res = await this.call(`/invite?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      body: { email, data: metadata },
+      key: this.cfg.serviceRoleKey,
+    });
+    if (res.status === 429) return 'rate_limited';
+    const code = res.ok ? '' : await errorCode(res);
+    if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit') return 'rate_limited';
+    if (code === 'user_already_exists' || code === 'email_exists') return 'exists';
+    if (res.ok) return 'sent';
+    throw new Error(`Supabase invite failed: ${res.status} ${code}`);
+  }
+
+  async verifyTokenHash(
+    tokenHash: string,
+    type: 'magiclink' | 'invite' | 'signup',
+  ): Promise<{ tokens: TokenSet; user: IdentityUser } | null> {
+    // `recovery` is deliberately absent from the type union: a reset link must only set a
+    // password on its own page/endpoint, never mint a session here.
+    const res = await this.call(`/verify?token_hash=${encodeURIComponent(tokenHash)}&type=${type}`, { body: {} });
+    if (res.status === 400 || res.status === 401 || res.status === 403) return null; // expired or already used
+    if (!res.ok) throw new Error(`Supabase verify failed: ${res.status}`);
+    const s = (await res.json()) as GoTrueSession;
+    return { tokens: toTokens(s), user: toUser(s.user) };
   }
 
   async deleteUser(userId: string): Promise<void> {

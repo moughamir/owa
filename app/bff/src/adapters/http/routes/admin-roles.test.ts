@@ -29,6 +29,15 @@ class FakeIdentity implements IIdentityProvider {
     return this.users.get(token.replace(/^tok:/, '')) ?? null;
   }
   async deleteUser() {}
+  async sendMagicLink() {
+    return 'sent' as const;
+  }
+  async sendInvite() {
+    return 'sent' as const;
+  }
+  async verifyTokenHash() {
+    return null;
+  }
 }
 
 const OWNER_EMAIL = 'owner@example.com';
