@@ -286,7 +286,8 @@
       "heading": "العلامات التجارية والإشعار القانوني",
       "body": "WaFine مشروع مستقل وغير رسمي. ليس تابعًا لشركة WhatsApp LLC أو Meta Platforms, Inc. أو Anthropic, PBC ولا معتمدًا منها. WhatsApp علامة تجارية مسجلة لشركة WhatsApp LLC.",
       "contact": "للاستفسارات الصحفية أو الإعلامية، تواصل معنا على {contactEmail}."
-    }
+    },
+    "home": "الصفحة الرئيسية WaFine"
   },
   "authors": {
     "eyebrow": "الفريق",
@@ -634,6 +635,132 @@
     "closure": {
       "badge": "طلب إغلاق",
       "since": "طُلب الإغلاق في {date}"
+    },
+    "title": "الإدارة",
+    "sectionsLabel": "أقسام الإدارة",
+    "common": {
+      "loading": "جارٍ التحميل…",
+      "loadFailed": "تعذّر التحميل",
+      "requestFailed": "فشل الطلب",
+      "cancel": "إلغاء",
+      "refresh": "تحديث",
+      "save": "حفظ التغييرات",
+      "reset": "إعادة تعيين",
+      "readOnly": "وصول للقراءة فقط",
+      "saved": "تم الحفظ.",
+      "noChanges": "لا توجد تغييرات للحفظ."
+    },
+    "soon": {
+      "text": "قريبًا — التصميم قيد الإنجاز."
+    },
+    "allowlist": {
+      "title": "قائمة الدعوات",
+      "inviteLabel": "دعوة رقم واتساب",
+      "phonePlaceholder": "+212 6XX XX XX XX",
+      "add": "إضافة",
+      "formatHint": "الصيغة الدولية (E.164)، مثال: +212 6XX XX XX XX. لا يمكن التسجيل إلا بهذا الرقم.",
+      "emptyCanManage": "لا توجد أرقام بعد. أضف رقمًا لدعوة شخص.",
+      "empty": "لا توجد أرقام بعد.",
+      "colNumber": "الرقم",
+      "colStatus": "الحالة",
+      "colAddedBy": "أضيف بواسطة",
+      "colAdded": "تاريخ الإضافة",
+      "registered": "مسجّل",
+      "invited": "مدعو",
+      "remove": "إزالة",
+      "removeQuestion": "إزالة {phone} من قائمة الدعوات؟",
+      "removeQuestionBound": "إزالة {phone}؟ {email} مرتبط به وسيفقد الارتباط.",
+      "addedBy": "أضيف بواسطة {admin} · {date}"
+    },
+    "limits": {
+      "title": "حدود الإرسال",
+      "countingNote": "يحتسب فقط الرسائل المرسلة عبر API وMCP (Claude) والردود التلقائية. الرسائل المكتوبة على الهاتف أو WhatsApp Web لا تُحتسب أبدًا.",
+      "capsTitle": "حدود الإرسال العامة لواجهة API",
+      "capsIntro": "القيمة الافتراضية لكل جلسة. يمكن تجاوزها لجلسة واحدة في الجلسات والاستخدام.",
+      "pacingTitle": "إيقاع الردود التلقائية",
+      "pacingIntro": "تُطبّق على الردود التلقائية لسير العمل إضافة إلى الحدود أعلاه، للحفاظ على إيقاع بشري.",
+      "fields": {
+        "perDay": {
+          "label": "رسائل في اليوم",
+          "help": "لكل جلسة، تُعاد يوميًا."
+        },
+        "perMinute": {
+          "label": "رسائل في الدقيقة",
+          "help": "لكل جلسة، حد الذروة."
+        },
+        "minGapMs": {
+          "label": "أدنى فاصل بين الردود (مللي ثانية)",
+          "help": "انتظر هذا القدر على الأقل بين ردين تلقائيين من الجلسة نفسها. 0 = بلا فاصل."
+        },
+        "maxPerMinuteSession": {
+          "label": "أقصى عدد ردود في الدقيقة لكل جلسة",
+          "help": "عبر جميع جهات الاتصال لرقم واحد."
+        },
+        "maxPerMinuteContact": {
+          "label": "أقصى عدد ردود في الدقيقة لكل جهة اتصال",
+          "help": "لمحادثة واحدة."
+        },
+        "backoffMs": {
+          "label": "التوقف بعد بلوغ حد (مللي ثانية)",
+          "help": "إيقاف الردود التلقائية لهذه المدة عند بلوغ حد الإيقاع. 0 = بلا توقف."
+        }
+      },
+      "lastChanged": "آخر تغيير {date}",
+      "lastChangedBy": "آخر تغيير {date} بواسطة {admin}"
+    },
+    "sessions": {
+      "title": "الجلسات والاستخدام",
+      "intro": "إرسالات API اليوم مقابل الحد اليومي لكل جلسة. رسائل الهاتف وWhatsApp Web لا تُحتسب أبدًا.",
+      "empty": "لا توجد جلسات واتساب بعد.",
+      "colUser": "المستخدم",
+      "colSession": "الجلسة",
+      "colStatus": "الحالة",
+      "colUsage": "إرسالات API اليوم",
+      "colResets": "تُعاد بعد",
+      "resetsIn": "تُعاد بعد {duration}",
+      "overrideBadge": "تجاوز",
+      "usageAria": "{today} من {perDay} إرسال API مستخدم اليوم",
+      "perMinute": "{count} / دقيقة",
+      "manage": "إدارة",
+      "view": "عرض",
+      "close": "إغلاق",
+      "capTitle": "تجاوز الحد لهذه الجلسة",
+      "capIntro": "اترك الحقل فارغًا لاستخدام الحد العام.",
+      "perDay": "في اليوم",
+      "perMinuteLabel": "في الدقيقة",
+      "globalPlaceholder": "عام",
+      "saveOverride": "حفظ التجاوز",
+      "clearOverride": "مسح التجاوز",
+      "apiKeys": "مفاتيح API",
+      "none": "لا شيء.",
+      "created": "أُنشئ في {date}",
+      "createdRevoked": "أُنشئ في {date} · أُلغي في {revokedAt}",
+      "revokedBadge": "ملغى",
+      "revoke": "إلغاء",
+      "revokeKeyQuestion": "إلغاء المفتاح {prefix}…؟",
+      "active": "نشط",
+      "claudeConnectors": "موصلات Claude",
+      "connected": "متصل منذ {date}",
+      "lastUsed": "آخر استخدام {date}",
+      "neverUsed": "لم يُستخدم",
+      "disconnectQuestion": "فصل {client}؟"
+    },
+    "users": {
+      "title": "المستخدمون",
+      "intro": "الأدوار تتحكم في الوصول إلى الإدارة. المالكون من ADMIN_EMAILS لا يمكن تخفيضهم أو تعطيلهم هنا. تعطيل حساب يحجبه دون حذفه.",
+      "empty": "لا يوجد مستخدمون بعد.",
+      "colEmail": "البريد الإلكتروني",
+      "colPhone": "الهاتف",
+      "colCreated": "تاريخ الإنشاء",
+      "colStatus": "الحالة",
+      "disabled": "معطّل",
+      "session": "جلسة",
+      "noSession": "بلا جلسة",
+      "enable": "تفعيل",
+      "disable": "تعطيل",
+      "enableQuestion": "تفعيل {who}؟",
+      "disableQuestion": "تعطيل {who}؟",
+      "joined": "انضم في {date}"
     }
   },
   "og": {
@@ -715,5 +842,42 @@
       "passwordSame": "اختر كلمة مرور مختلفة عن الحالية.",
       "currentRequired": "أدخل كلمة المرور الحالية."
     }
+  },
+  "consent": {
+    "title": "ربط واتساب الخاص بك",
+    "loading": "جارٍ التحميل…",
+    "missingRequest": "طلب تسجيل الدخول مفقود. ابدأ من جديد من Claude.",
+    "invalidRequest": "طلب تسجيل الدخول هذا لم يعد صالحًا.",
+    "requestFailed": "فشل الطلب",
+    "wantsAccess": "<strong>{client}</strong> يريد استخدام حساب واتساب الخاص بك عبر موصل MCP في WaFine.",
+    "redirectBack": "بعد الموافقة، تعود إلى <strong>{host}</strong>.",
+    "loopbackWarning": "هذا التطبيق يعود إلى برنامج على هذا الحاسوب ({host}). وافق فقط إذا كنت أنت من بدأ الاتصال للتو، مثلاً من Claude Code.",
+    "noSession": "ليس لديك جلسة واتساب بعد. <link>أنشئها وامسح رمز QR</link>، ثم أعد بدء الاتصال من Claude.",
+    "allow": "السماح",
+    "deny": "الرفض",
+    "scopeRead": "قراءة محادثاتك ورسائلك وجهات اتصالك ومجموعاتك.",
+    "scopeSend": "إرسال رسائل من رقمك نيابةً عنك.",
+    "scopeSession": "جلستك على واتساب فقط. يمكنك فصلها في أي وقت من صفحة واتساب."
+  },
+  "blog": {
+    "eyebrow": "المدونة",
+    "indexTitle": "أخبار فريق WaFine",
+    "indexLead": "إعلانات المنتج وملاحظات الإطلاق وتحليلات معمّقة.",
+    "rss": "اشترك عبر RSS",
+    "empty": "لا توجد مقالات منشورة بعد — عُد قريبًا.",
+    "minRead": "قراءة {minutes} دقيقة",
+    "draft": "مسودة",
+    "tags": "الوسوم",
+    "allPosts": "← كل المقالات",
+    "credit": "WaFine برعاية Ai4x Academy، بناء ZawIA.Tech، مفتوح المصدر على OpenWA."
+  },
+  "workflows": {
+    "title": "سير العمل",
+    "subtitle": "ردود تلقائية تُرسل فقط إلى جهات الاتصال في قائمة الدعوات.",
+    "loadFailed": "تعذّر تحميل سير العمل",
+    "updateFailed": "تعذّر تحديث سير العمل",
+    "on": "مفعّل",
+    "off": "معطّل",
+    "toggleLabel": "{name} {state}"
   }
 }

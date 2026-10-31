@@ -15,16 +15,24 @@ import { InlineConfirm } from './inline-confirm';
 export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: boolean; canManageRoles: boolean }) {
   const tr = useTranslations('admin.roles');
   const tc = useTranslations('admin.closure');
+  const tu = useTranslations('admin.users');
+  const tm = useTranslations('admin.common');
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [roleEvents, setRoleEvents] = useState<{ userId: string; events: AdminUserRoleEvent[] } | null>(null);
 
-  const reload = useCallback(() => listAdminUsers().then(setUsers), []);
+  const reload = useCallback(() => listAdminUsers().then((list) => {
+    setUsers(list);
+    setLoadFailed(false);
+  }), []);
 
   useEffect(() => {
-    reload().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
+    reload().catch(() => setLoadFailed(true));
   }, [reload]);
+
+  const shownError = error ?? (loadFailed ? tm('loadFailed') : null);
 
   async function changeRole(user: AdminUser, role: UserRole) {
     setBusy(true);
@@ -34,7 +42,7 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
       setUsers((list) => list?.map((u) => (u.userId === user.userId ? { ...u, role } : u)) ?? list);
       if (roleEvents?.userId === user.userId) setRoleEvents({ userId: user.userId, events: await listUserRoleEvents(user.userId) });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : tm('requestFailed'));
     } finally {
       setBusy(false);
     }
@@ -50,7 +58,7 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
     try {
       setRoleEvents({ userId, events: await listUserRoleEvents(userId) });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : tm('requestFailed'));
     } finally {
       setBusy(false);
     }
@@ -63,7 +71,7 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
       const r = await setUserDisabled(user.userId, !user.disabled);
       setUsers((list) => list?.map((u) => (u.userId === r.userId ? { ...u, disabled: r.disabled } : u)) ?? list);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : tm('requestFailed'));
     } finally {
       setBusy(false);
     }
@@ -74,16 +82,16 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
     const who = u.email ?? formatPhone(u.phone);
     return u.disabled ? (
       <InlineConfirm
-        label="Enable"
-        question={`Enable ${who}?`}
+        label={tu('enable')}
+        question={tu('enableQuestion', { who })}
         tone="primary"
         disabled={busy}
         onConfirm={() => toggle(u)}
       />
     ) : (
       <InlineConfirm
-        label="Disable"
-        question={`Disable ${who}?`}
+        label={tu('disable')}
+        question={tu('disableQuestion', { who })}
         disabled={busy}
         onConfirm={() => toggle(u)}
       />
@@ -93,7 +101,7 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
   function badges(u: AdminUser) {
     return (
       <div className="flex flex-wrap gap-1">
-        {u.disabled && <span className="badge badge-error badge-sm">disabled</span>}
+        {u.disabled && <span className="badge badge-error badge-sm">{tu('disabled')}</span>}
         {u.closureRequestedAt && (
           <span
             className="badge badge-warning badge-sm"
@@ -103,9 +111,9 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
           </span>
         )}
         {u.hasSession ? (
-          <span className="badge badge-success badge-sm">session</span>
+          <span className="badge badge-success badge-sm">{tu('session')}</span>
         ) : (
-          <span className="badge badge-ghost badge-sm">no session</span>
+          <span className="badge badge-ghost badge-sm">{tu('noSession')}</span>
         )}
       </div>
     );
@@ -169,27 +177,27 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
 
   return (
     <>
-      <h2 className="mb-1 text-xl font-bold">Users</h2>
+      <h2 className="mb-1 text-xl font-bold">{tu('title')}</h2>
       <p className="mb-4 text-sm text-base-content/75">
-        Roles control admin access. Owners from ADMIN_EMAILS cannot be demoted or disabled here. Disabling an account blocks it without deleting it.
+        {tu('intro')}
       </p>
 
-      {error && (
+      {shownError && (
         <div role="alert" className="alert alert-error mb-4">
-          <span>{error}</span>
+          <span>{shownError}</span>
         </div>
       )}
 
       {!users ? (
-        !error && (
+        !shownError && (
           <p className="flex items-center gap-2 text-base-content/75">
             <span className="loading loading-spinner loading-sm" />
-            Loading…
+            {tm('loading')}
           </p>
         )
       ) : users.length === 0 ? (
         <div className="alert">
-          <span>No users yet.</span>
+          <span>{tu('empty')}</span>
         </div>
       ) : (
         <>
@@ -198,10 +206,10 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
             <table className="table">
               <thead>
                 <tr>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Created</th>
-                  <th>Status</th>
+                  <th>{tu('colEmail')}</th>
+                  <th>{tu('colPhone')}</th>
+                  <th>{tu('colCreated')}</th>
+                  <th>{tu('colStatus')}</th>
                   <th>{tr('column')}</th>
                   <th>{tr('history')}</th>
                   <th />
@@ -217,7 +225,7 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
                     <td>{badges(u)}</td>
                     <td>{roleCell(u)}</td>
                     <td>{historyButton(u)}</td>
-                    <td className="text-right">{action(u)}</td>
+                    <td className="text-end">{action(u)}</td>
                   </tr>
                   {roleEvents?.userId === u.userId && (
                     <tr>
@@ -236,7 +244,7 @@ export function UsersTab({ canManageUsers, canManageRoles }: { canManageUsers: b
               <li key={u.userId} className="rounded-box border border-base-300 p-3">
                 <p className="break-all font-medium">{u.email ?? '—'}</p>
                 <p className="font-mono text-xs text-base-content/75">
-                  {formatPhone(u.phone)} · joined {new Date(u.createdAt).toLocaleDateString()}
+                  {[formatPhone(u.phone), tu('joined', { date: new Date(u.createdAt).toLocaleDateString() })].join(' · ')}
                 </p>
                 <div className="mt-2">{badges(u)}</div>
                 <div className="mt-2 flex flex-wrap items-center gap-2">

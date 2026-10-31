@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { getAdminSettings, updateAdminSettings, type AdminSettings } from '@/lib/admin-api';
 import {
   SEND_LIMIT_BOUNDS,
@@ -16,58 +17,34 @@ import {
   type SettingsForm,
 } from '@/lib/admin-format';
 
-const COUNTING_NOTE =
-  'Counts only messages sent through the API, MCP (Claude) and auto-replies. Messages typed on the phone or WhatsApp Web never count.';
-
 interface FieldSpec {
   key: SettingsField;
-  label: string;
-  help: string;
   bounds: Bounds;
   /** Show a "= 2 s" style hint under millisecond fields. */
   ms?: boolean;
 }
 
 const LIMIT_FIELDS: FieldSpec[] = [
-  { key: 'perDay', label: 'Messages per day', help: 'Per session, resets daily.', bounds: SEND_LIMIT_BOUNDS.perDay },
-  { key: 'perMinute', label: 'Messages per minute', help: 'Per session, burst cap.', bounds: SEND_LIMIT_BOUNDS.perMinute },
+  { key: 'perDay', bounds: SEND_LIMIT_BOUNDS.perDay },
+  { key: 'perMinute', bounds: SEND_LIMIT_BOUNDS.perMinute },
 ];
 
 const WORKFLOW_FIELDS: FieldSpec[] = [
-  {
-    key: 'minGapMs',
-    label: 'Minimum gap between replies (ms)',
-    help: 'Wait at least this long between two auto-replies from one session. 0 = no gap.',
-    bounds: WORKFLOW_BOUNDS.minGapMs,
-    ms: true,
-  },
-  {
-    key: 'maxPerMinuteSession',
-    label: 'Max replies per minute, per session',
-    help: 'Across all contacts of one number.',
-    bounds: WORKFLOW_BOUNDS.maxPerMinuteSession,
-  },
-  {
-    key: 'maxPerMinuteContact',
-    label: 'Max replies per minute, per contact',
-    help: 'To one chat.',
-    bounds: WORKFLOW_BOUNDS.maxPerMinuteContact,
-  },
-  {
-    key: 'backoffMs',
-    label: 'Back-off after a limit is hit (ms)',
-    help: 'Pause auto-replies for this long once a pacing limit trips. 0 = no pause.',
-    bounds: WORKFLOW_BOUNDS.backoffMs,
-    ms: true,
-  },
+  { key: 'minGapMs', bounds: WORKFLOW_BOUNDS.minGapMs, ms: true },
+  { key: 'maxPerMinuteSession', bounds: WORKFLOW_BOUNDS.maxPerMinuteSession },
+  { key: 'maxPerMinuteContact', bounds: WORKFLOW_BOUNDS.maxPerMinuteContact },
+  { key: 'backoffMs', bounds: WORKFLOW_BOUNDS.backoffMs, ms: true },
 ];
 
 export function SendLimitsTab({ canManage }: { canManage: boolean }) {
+  const t = useTranslations('admin.limits');
+  const tc = useTranslations('admin.common');
   const [settings, setSettings] = useState<AdminSettings | null>(null);
   const [form, setForm] = useState<SettingsForm | null>(null);
   const [errors, setErrors] = useState<FieldErrors<SettingsField>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
 
   function apply(s: AdminSettings) {
@@ -79,8 +56,10 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
   useEffect(() => {
     getAdminSettings()
       .then(apply)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
+      .catch(() => setLoadFailed(true));
   }, []);
+
+  const shownError = error ?? (loadFailed ? tc('loadFailed') : null);
 
   function onChange(key: SettingsField, value: string) {
     setForm((f) => (f ? { ...f, [key]: value } : f));
@@ -113,29 +92,29 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
     setErrors({});
     const patch = diffSettings(settings, result.value);
     if (!patch) {
-      setSaved('No changes to save.');
+      setSaved(tc('noChanges'));
       return;
     }
     setBusy(true);
     try {
       apply(await updateAdminSettings(patch));
-      setSaved('Saved.');
+      setSaved(tc('saved'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : tc('requestFailed'));
     } finally {
       setBusy(false);
     }
   }
 
   if (!form || !settings) {
-    return error ? (
+    return shownError ? (
       <div role="alert" className="alert alert-error">
-        <span>{error}</span>
+        <span>{shownError}</span>
       </div>
     ) : (
       <p className="flex items-center gap-2 text-base-content/75">
         <span className="loading loading-spinner loading-sm" />
-        Loading…
+        {tc('loading')}
       </p>
     );
   }
@@ -151,7 +130,7 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
     return (
       <div key={spec.key} className="flex w-full flex-col">
         <label htmlFor={id} className="flex select-none items-center justify-between px-1 pt-2 pb-1">
-          <span className="text-sm font-medium text-base-content">{spec.label}</span>
+          <span className="text-sm font-medium text-base-content">{t(`fields.${spec.key}.label`)}</span>
         </label>
         <input
           id={id}
@@ -167,7 +146,8 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
           className={`input w-full ${err ? 'input-error' : ''}`}
         />
         <p id={`${id}-help`} className="mt-1 text-xs text-base-content/75">
-          {spec.help} {spec.bounds.min.toLocaleString('en-US')}–{spec.bounds.max.toLocaleString('en-US')}
+          {t(`fields.${spec.key}.help`)} {spec.bounds.min.toLocaleString('en-US')}–
+          {spec.bounds.max.toLocaleString('en-US')}
           {spec.ms && parsed.ok ? ` · ${formatMs(parsed.value)}` : ''}
         </p>
         {err && (
@@ -181,23 +161,21 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <h2 className="mb-1 text-xl font-bold">Send limits</h2>
-      <p className="mb-4 text-sm text-base-content/75">{COUNTING_NOTE}</p>
+      <h2 className="mb-1 text-xl font-bold">{t('title')}</h2>
+      <p className="mb-4 text-sm text-base-content/75">{t('countingNote')}</p>
 
-      {error && (
+      {shownError && (
         <div role="alert" className="alert alert-error mb-4">
-          <span>{error}</span>
+          <span>{shownError}</span>
         </div>
       )}
 
       <section aria-labelledby="limits-caps-title" className="card mb-4 border border-base-300 bg-base-100">
         <div className="card-body gap-3">
           <h3 id="limits-caps-title" className="card-title text-lg">
-            Global API send caps
+            {t('capsTitle')}
           </h3>
-          <p className="text-sm text-base-content/75">
-            Default for every session. Override one session in Sessions &amp; usage.
-          </p>
+          <p className="text-sm text-base-content/75">{t('capsIntro')}</p>
           <div className="grid gap-3 sm:grid-cols-2">{LIMIT_FIELDS.map(field)}</div>
         </div>
       </section>
@@ -205,11 +183,9 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
       <section aria-labelledby="limits-pacing-title" className="card mb-4 border border-base-300 bg-base-100">
         <div className="card-body gap-3">
           <h3 id="limits-pacing-title" className="card-title text-lg">
-            Auto-reply pacing
+            {t('pacingTitle')}
           </h3>
-          <p className="text-sm text-base-content/75">
-            Applies to workflow auto-replies on top of the caps above, to keep numbers human-paced.
-          </p>
+          <p className="text-sm text-base-content/75">{t('pacingIntro')}</p>
           <div className="grid gap-3 sm:grid-cols-2">{WORKFLOW_FIELDS.map(field)}</div>
         </div>
       </section>
@@ -217,7 +193,7 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
       {canManage ? <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <button type="submit" disabled={busy || !dirty} className="btn btn-primary w-full sm:w-auto">
           {busy && <span className="loading loading-spinner loading-sm" />}
-          Save changes
+          {tc('save')}
         </button>
         <button
           type="button"
@@ -229,16 +205,17 @@ export function SendLimitsTab({ canManage }: { canManage: boolean }) {
           }}
           className="btn btn-ghost w-full sm:w-auto"
         >
-          Reset
+          {tc('reset')}
         </button>
         <span role="status" className="text-sm text-base-content/75">
           {saved}
         </span>
-      </div> : <p className="text-sm text-base-content/70">Read-only access</p>}
+      </div> : <p className="text-sm text-base-content/70">{tc('readOnly')}</p>}
       {settings.updatedAt && (
         <p className="mt-3 text-xs text-base-content/75">
-          Last changed {new Date(settings.updatedAt).toLocaleString()}
-          {settings.updatedBy ? ` by ${settings.updatedBy}` : ''}
+          {settings.updatedBy
+            ? t('lastChangedBy', { date: new Date(settings.updatedAt).toLocaleString(), admin: settings.updatedBy })
+            : t('lastChanged', { date: new Date(settings.updatedAt).toLocaleString() })}
         </p>
       )}
     </form>

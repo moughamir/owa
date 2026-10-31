@@ -104,7 +104,7 @@ export function AppHeader({ phone }: { phone?: string | null }) {
         </div>
 
         <div className="navbar-end gap-1">
-          <span className="mr-2 hidden max-w-64 truncate text-sm text-base-content/75 lg:block" title={account}>
+          <span className="me-2 hidden max-w-64 truncate text-sm text-base-content/75 lg:block" title={account}>
             {account}
           </span>
           <nav className="hidden items-center gap-1 md:flex">

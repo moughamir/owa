@@ -385,7 +385,7 @@ export default function WhatsAppPage() {
                       <tr>
                         <th>{t('key')}</th>
                         <th>{t('created')}</th>
-                        <th className="text-right">{t('actions')}</th>
+                        <th className="text-end">{t('actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -393,7 +393,7 @@ export default function WhatsAppPage() {
                         <tr key={k.id}>
                           <td className="font-mono text-xs">{k.keyPrefix}…</td>
                           <td className="text-xs">{when(k.createdAt)}</td>
-                          <td className="text-right">
+                          <td className="text-end">
                             {k.revokedAt ? (
                               <span className="badge badge-ghost badge-sm">{t('revoked')}</span>
                             ) : (
@@ -452,7 +452,7 @@ export default function WhatsAppPage() {
             <p className="text-sm text-base-content/75">
               {t('claudeIntro')}
             </p>
-            <ol className="list-decimal space-y-1 pl-5 text-sm">
+            <ol className="list-decimal space-y-1 ps-5 text-sm">
               <li>{t('claudeStep1')}</li>
               <li>{t('claudeStep2')}</li>
               <li>{t('claudeStep3')}</li>
@@ -474,7 +474,7 @@ export default function WhatsAppPage() {
                             {t('appConnected', { date: when(a.createdAt) })}
                             {a.lastUsedAt ? ` · ${t('appLastUsed', { date: when(a.lastUsedAt) })}` : ''}
                           </td>
-                          <td className="text-right">
+                          <td className="text-end">
                             <button
                               type="button"
                               disabled={busy}

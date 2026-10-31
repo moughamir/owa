@@ -17,7 +17,7 @@ import { Link } from '@/i18n/navigation';
 
 type TabId = AdminTabId;
 
-function renderTab(id: TabId, permissions: string[]) {
+function renderTab(id: TabId, permissions: string[], labels: { billing: string; crm: string }) {
   const can = abilities(permissions);
   switch (id) {
     case 'limits':
@@ -31,9 +31,9 @@ function renderTab(id: TabId, permissions: string[]) {
     case 'waitlist':
       return <WaitlistTab canDecide={can.decideWaitlist} canRemove={can.removeWaitlist} />;
     case 'billing':
-      return <ComingSoonTab title="Billing" />;
+      return <ComingSoonTab title={labels.billing} />;
     case 'crm':
-      return <ComingSoonTab title="CRM" />;
+      return <ComingSoonTab title={labels.crm} />;
   }
 }
 
@@ -46,9 +46,12 @@ export default function AdminPage() {
   const router = useRouter();
   const tt = useTranslations('admin.tabs');
   const tf = useTranslations('admin.forbidden');
+  const t = useTranslations('admin');
+  const tc = useTranslations('admin.common');
   const [ready, setReady] = useState(false);
   const [forbidden, setForbidden] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [active, setActive] = useState<TabId>('limits');
   const [visited, setVisited] = useState<ReadonlySet<TabId>>(() => new Set<TabId>(['limits']));
   const [permissions, setPermissions] = useState<string[]>([]);
@@ -86,9 +89,12 @@ export default function AdminPage() {
       .catch((err) => {
         if (err instanceof ApiError && err.status === 401) router.push('/auth/login');
         else if (err instanceof ApiError && err.status === 403) setForbidden(true);
-        else setError(err instanceof Error ? err.message : 'Failed to load');
+        else setError(err instanceof Error ? err.message : null);
+        if (!(err instanceof Error)) setLoadFailed(true);
       });
   }, [router]);
+
+  const shownError = error ?? (loadFailed ? tc('loadFailed') : null);
 
   const availableTabs = visibleTabs(permissions).map((id) => ({ id, label: id }));
 
@@ -128,14 +134,14 @@ export default function AdminPage() {
     return (
       <main className="mx-auto w-full max-w-5xl p-4">
         <AppHeader />
-        {error ? (
+        {shownError ? (
           <div role="alert" className="alert alert-error">
-            <span>{error}</span>
+            <span>{shownError}</span>
           </div>
         ) : (
           <p className="flex items-center gap-2 text-base-content/75">
             <span className="loading loading-spinner loading-sm" />
-            Loading…
+            {tc('loading')}
           </p>
         )}
       </main>
@@ -145,11 +151,11 @@ export default function AdminPage() {
   return (
     <main className="mx-auto w-full max-w-5xl p-4">
       <AppHeader />
-      <h1 className="mb-4 text-2xl font-bold">Admin</h1>
+      <h1 className="mb-4 text-2xl font-bold">{t('title')}</h1>
 
       {/* Scrolls sideways on narrow screens instead of wrapping into a second row. */}
       <div className="-mx-4 mb-4 overflow-x-auto px-4">
-        <div role="tablist" aria-label="Admin sections" className="tabs tabs-border w-max min-w-full">
+        <div role="tablist" aria-label={t('sectionsLabel')} className="tabs tabs-border w-max min-w-full">
           {availableTabs.map((t, i) => (
             <button
               key={t.id}
@@ -183,7 +189,7 @@ export default function AdminPage() {
             tabIndex={0}
             className="rounded-box focus:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/40"
           >
-            {renderTab(t.id, permissions)}
+            {renderTab(t.id, permissions, { billing: tt('billing'), crm: tt('crm') })}
           </div>
         ) : null,
       )}

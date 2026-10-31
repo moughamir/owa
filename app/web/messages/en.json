@@ -285,7 +285,8 @@
       "heading": "Trademark & Legal Notice",
       "body": "WaFine is an independent and unofficial project. It is not affiliated with, authorized, maintained, or endorsed by WhatsApp LLC, Meta Platforms, Inc., or Anthropic, PBC. WhatsApp is a registered trademark of WhatsApp LLC.",
       "contact": "For brand or media inquiries, contact us at {contactEmail}."
-    }
+    },
+    "home": "WaFine home"
   },
   "authors": {
     "eyebrow": "People",
@@ -633,6 +634,132 @@
     "closure": {
       "badge": "Closure requested",
       "since": "Closure requested on {date}"
+    },
+    "title": "Admin",
+    "sectionsLabel": "Admin sections",
+    "common": {
+      "loading": "Loading…",
+      "loadFailed": "Failed to load",
+      "requestFailed": "Request failed",
+      "cancel": "Cancel",
+      "refresh": "Refresh",
+      "save": "Save changes",
+      "reset": "Reset",
+      "readOnly": "Read-only access",
+      "saved": "Saved.",
+      "noChanges": "No changes to save."
+    },
+    "soon": {
+      "text": "Coming soon — design in progress."
+    },
+    "allowlist": {
+      "title": "Invite allowlist",
+      "inviteLabel": "Invite a WhatsApp number",
+      "phonePlaceholder": "+212 6XX XX XX XX",
+      "add": "Add",
+      "formatHint": "International format (E.164), e.g. +212 6XX XX XX XX. They can sign up only with this number.",
+      "emptyCanManage": "No numbers yet. Add one to invite someone.",
+      "empty": "No numbers yet.",
+      "colNumber": "Number",
+      "colStatus": "Status",
+      "colAddedBy": "Added by",
+      "colAdded": "Added",
+      "registered": "Registered",
+      "invited": "Invited",
+      "remove": "Remove",
+      "removeQuestion": "Remove {phone} from the allowlist?",
+      "removeQuestionBound": "Remove {phone}? {email} is bound to it and will lose the link.",
+      "addedBy": "Added by {admin} · {date}"
+    },
+    "limits": {
+      "title": "Send limits",
+      "countingNote": "Counts only messages sent through the API, MCP (Claude) and auto-replies. Messages typed on the phone or WhatsApp Web never count.",
+      "capsTitle": "Global API send caps",
+      "capsIntro": "Default for every session. Override one session in Sessions & usage.",
+      "pacingTitle": "Auto-reply pacing",
+      "pacingIntro": "Applies to workflow auto-replies on top of the caps above, to keep numbers human-paced.",
+      "fields": {
+        "perDay": {
+          "label": "Messages per day",
+          "help": "Per session, resets daily."
+        },
+        "perMinute": {
+          "label": "Messages per minute",
+          "help": "Per session, burst cap."
+        },
+        "minGapMs": {
+          "label": "Minimum gap between replies (ms)",
+          "help": "Wait at least this long between two auto-replies from one session. 0 = no gap."
+        },
+        "maxPerMinuteSession": {
+          "label": "Max replies per minute, per session",
+          "help": "Across all contacts of one number."
+        },
+        "maxPerMinuteContact": {
+          "label": "Max replies per minute, per contact",
+          "help": "To one chat."
+        },
+        "backoffMs": {
+          "label": "Back-off after a limit is hit (ms)",
+          "help": "Pause auto-replies for this long once a pacing limit trips. 0 = no pause."
+        }
+      },
+      "lastChanged": "Last changed {date}",
+      "lastChangedBy": "Last changed {date} by {admin}"
+    },
+    "sessions": {
+      "title": "Sessions & usage",
+      "intro": "API sends today against each session's daily cap. Phone and WhatsApp Web messages never count.",
+      "empty": "No WhatsApp sessions yet.",
+      "colUser": "User",
+      "colSession": "Session",
+      "colStatus": "Status",
+      "colUsage": "API sends today",
+      "colResets": "Resets in",
+      "resetsIn": "Resets in {duration}",
+      "overrideBadge": "override",
+      "usageAria": "{today} of {perDay} API sends used today",
+      "perMinute": "{count} / min",
+      "manage": "Manage",
+      "view": "View",
+      "close": "Close",
+      "capTitle": "Cap override for this session",
+      "capIntro": "Leave a field blank to use the global cap.",
+      "perDay": "Per day",
+      "perMinuteLabel": "Per minute",
+      "globalPlaceholder": "global",
+      "saveOverride": "Save override",
+      "clearOverride": "Clear override",
+      "apiKeys": "API keys",
+      "none": "None.",
+      "created": "created {date}",
+      "createdRevoked": "created {date} · revoked {revokedAt}",
+      "revokedBadge": "revoked",
+      "revoke": "Revoke",
+      "revokeKeyQuestion": "Revoke key {prefix}…?",
+      "active": "active",
+      "claudeConnectors": "Claude connectors",
+      "connected": "connected {date}",
+      "lastUsed": "last used {date}",
+      "neverUsed": "never used",
+      "disconnectQuestion": "Disconnect {client}?"
+    },
+    "users": {
+      "title": "Users",
+      "intro": "Roles control admin access. Owners from ADMIN_EMAILS cannot be demoted or disabled here. Disabling an account blocks it without deleting it.",
+      "empty": "No users yet.",
+      "colEmail": "Email",
+      "colPhone": "Phone",
+      "colCreated": "Created",
+      "colStatus": "Status",
+      "disabled": "disabled",
+      "session": "session",
+      "noSession": "no session",
+      "enable": "Enable",
+      "disable": "Disable",
+      "enableQuestion": "Enable {who}?",
+      "disableQuestion": "Disable {who}?",
+      "joined": "joined {date}"
     }
   },
   "og": {
@@ -714,5 +841,42 @@
       "passwordSame": "Choose a password different from the current one.",
       "currentRequired": "Enter your current password."
     }
+  },
+  "consent": {
+    "title": "Connect to your WhatsApp",
+    "loading": "Loading…",
+    "missingRequest": "Missing sign-in request. Start again from Claude.",
+    "invalidRequest": "This sign-in request is no longer valid.",
+    "requestFailed": "Request failed",
+    "wantsAccess": "<strong>{client}</strong> wants to use your WhatsApp account through the WaFine MCP connector.",
+    "redirectBack": "After you approve, you go back to <strong>{host}</strong>.",
+    "loopbackWarning": "This app returns to a program on this computer ({host}). Approve only if you just started the connection yourself, for example from Claude Code.",
+    "noSession": "You have no WhatsApp session yet. <link>Create it and scan the QR</link>, then start the connection again from Claude.",
+    "allow": "Allow",
+    "deny": "Deny",
+    "scopeRead": "Read your chats, messages, contacts and groups.",
+    "scopeSend": "Send messages from your number on your behalf.",
+    "scopeSession": "Only your own WhatsApp session. You can disconnect it any time on the WhatsApp page."
+  },
+  "blog": {
+    "eyebrow": "Blog",
+    "indexTitle": "News from the WaFine team",
+    "indexLead": "Product announcements, launch notes and deep dives.",
+    "rss": "Subscribe via RSS",
+    "empty": "No posts published yet — check back soon.",
+    "minRead": "{minutes} min read",
+    "draft": "Draft",
+    "tags": "Tags",
+    "allPosts": "← All posts",
+    "credit": "WaFine, sponsored by Ai4x Academy, built by ZawIA.Tech, open-core on OpenWA."
+  },
+  "workflows": {
+    "title": "Workflows",
+    "subtitle": "Automatic replies, sent only to contacts on your allowlist.",
+    "loadFailed": "Could not load workflows",
+    "updateFailed": "Could not update workflow",
+    "on": "on",
+    "off": "off",
+    "toggleLabel": "{name} {state}"
   }
 }

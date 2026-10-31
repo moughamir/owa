@@ -11,8 +11,20 @@ function leafKeys(node: unknown, prefix = ''): string[] {
   );
 }
 
-/** Namespaces rendered on the auth and signed-in user pages; a missing key there shows English. */
-const NAMESPACES = ['auth', 'appNav', 'whatsappPage', 'messagesPage', 'common', 'appStates'] as const;
+/** Namespaces rendered on the auth, admin and signed-in user pages; a missing key there shows English. */
+const NAMESPACES = [
+  'auth',
+  'appNav',
+  'whatsappPage',
+  'messagesPage',
+  'common',
+  'appStates',
+  'admin',
+  'consent',
+  'blog',
+  'workflows',
+  'brand',
+] as const;
 
 describe('message catalog parity', () => {
   for (const ns of NAMESPACES) {
