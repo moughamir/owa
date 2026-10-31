@@ -52,6 +52,10 @@ WEB_URL=https://app.example.com
 PUBLIC_API_URL=https://api.example.com
 ```
 
+Encrypted backups are part of the same steady state: `BACKUP_AGE_RECIPIENT` (the `age` public
+key) must be in `/opt/wa/stack/.env`, or the nightly `stack/backup.sh` fails loudly but safely on
+purpose — no plaintext fallback. Keypair, restore test and rotation: `docs/14-encrypted-backups.md`.
+
 **Apply via runbook flow:**
 - Edit `/opt/wa/stack/.env` on the VM.
 - Run `./stack/wa up -d` (or `scripts/deploy.sh` as appropriate) to restart services that need the new values.
