@@ -61,16 +61,4 @@ export class Argon2idKeyDerivationService implements IKeyDerivationService {
     return crypto.getRandomValues(new Uint8Array(32));
   }
 
-  /**
-   * Generate a random recovery mnemonic (256-bit entropy → 24 BIP39 words).
-   * This is a placeholder — real implementation needs a BIP39 wordlist.
-   */
-  generateRecoveryMnemonic(): string {
-    const entropy = crypto.getRandomValues(new Uint8Array(32));
-    // TODO: Replace with proper BIP39 encoding
-    // For now, return hex as a placeholder
-    return Array.from(entropy)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-  }
 }

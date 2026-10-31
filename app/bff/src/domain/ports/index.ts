@@ -51,9 +51,6 @@ export interface IKeyDerivationService {
 
   /** Generate a random device secret (32 bytes). */
   generateDeviceSecret(): Uint8Array;
-
-  /** Generate a random recovery mnemonic (256-bit entropy). */
-  generateRecoveryMnemonic(): string;
 }
 
 // ── Storage ports ─────────────────────────────────────────────
