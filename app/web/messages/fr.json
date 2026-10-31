@@ -21,10 +21,10 @@
   },
   "og": {
     "home": {
-      "title": "Faites de votre numéro WhatsApp un coéquipier IA.",
+      "title": "WaFine — passerelle WhatsApp pour les équipes.",
       "subtitle": "Connectez votre numéro, créez des réponses automatiques rythmées et branchez-le sur Claude et vos applications via une seule API REST et MCP. Sur invitation. Conçu au Maroc.",
       "badge": "Open-core · Construit sur OpenWA",
-      "alt": "WaFine — Faites de votre numéro WhatsApp un coéquipier IA."
+      "alt": "WaFine — passerelle WhatsApp pour les équipes."
     },
     "login": {
       "eyebrow": "Connexion",
