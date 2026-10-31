@@ -45,6 +45,7 @@ export type IgnoreReason =
   | 'from_me'
   | 'not_direct_chat'
   | 'not_text'
+  | 'poll'
   | 'unknown_session'
   | 'not_allowlisted'
   | 'no_match'

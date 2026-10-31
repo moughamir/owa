@@ -17,7 +17,8 @@
     "retry": "Try again",
     "unread": "{count} unread",
     "noPreview": "No messages yet",
-    "mediaError": "Could not open the attachment. Try again."
+    "mediaError": "Could not open the attachment. Try again.",
+    "pollLabel": "📊 Poll"
   },
   "og": {
     "home": {

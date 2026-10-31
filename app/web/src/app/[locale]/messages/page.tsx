@@ -141,6 +141,7 @@ export default function MessagesPage() {
                 {messages.map((message) => (
                   <li key={message.id} className={`flex ${message.outgoing ? 'justify-end' : 'justify-start'}`}>
                     <article className={`max-w-[88%] min-w-0 rounded-2xl px-3.5 py-2.5 text-sm shadow-sm ${message.outgoing ? 'rounded-ee-md bg-primary text-primary-content' : 'rounded-es-md bg-base-200 text-base-content'}`}>
+                      {message.mediaType === 'poll' && <p className="mb-1 text-xs font-semibold opacity-80">{t('pollLabel')}</p>}
                       {message.text ? <p className="whitespace-pre-wrap break-words">{message.text}</p> : message.mediaPath ? <p className="text-xs opacity-80">{t('mediaPlaceholder', { type: message.mediaType ?? 'file' })}</p> : null}
                       {message.mediaPath && (
                         <div className="mt-2">

@@ -17,7 +17,8 @@
     "retry": "Réessayer",
     "unread": "{count} non lus",
     "noPreview": "Aucun message pour le moment",
-    "mediaError": "Impossible d'ouvrir la pièce jointe. Réessayez."
+    "mediaError": "Impossible d'ouvrir la pièce jointe. Réessayez.",
+    "pollLabel": "📊 Poll"
   },
   "og": {
     "home": {
