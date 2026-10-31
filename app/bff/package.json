@@ -19,8 +19,6 @@
     "@aws-sdk/s3-request-presigner": "^3.1156.0",
     "@hono/zod-validator": "^0.4.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "@orpc/client": "^1.16.1",
-    "@orpc/server": "^1.16.1",
     "argon2": "^0.45.1",
     "bullmq": "^6.4.0",
     "drizzle-orm": "^0.36.4",

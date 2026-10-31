@@ -279,10 +279,6 @@ export function createApp(deps: AppDeps) {
   // Workflow toggles are scoped to the caller's tenant (`auth.tenantId`, see middleware).
   if (workflows) registerWorkflowRoutes(app, workflows.store);
 
-  // TODO: Mount oRPC routers here
-  // app.route('/api', messageRouter);
-  // app.route('/api', contactRouter);
-  // app.route('/api', tenantRouter);
 
   // Error handler: HTTPException keeps its status (401/403/…); anything else is a 500
   // whose details stay in the log.
