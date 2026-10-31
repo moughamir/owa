@@ -20,7 +20,7 @@ Check prerequisites: `./scripts/bootstrap.sh --check`
 ## Clone and configure
 ```bash
 git clone https://github.com/zawia-tech/wafine.git
-cd openwa-oci-infra
+cd wafine
 
 # Copy env examples
 cp .env.example .env
