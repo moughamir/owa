@@ -68,6 +68,9 @@ ssh <vm-host> 'curl -s http://127.0.0.1:4000/health/ready'
 ```
 `/health/ready` must return 200.
 
+Uptime and alerting after launch (HEALTH_URL_* repo variables for `nightly-health`, an external
+hosted monitor, optional `METRICS_TOKEN` scrape): `docs/16-uptime-alerts.md`.
+
 ## (d) DNS records for web, api, docs
 
 Do this according to the chosen option in (a). Neither option moves the zone's nameservers.
