@@ -45,6 +45,9 @@ import {
 import type { IAdminRepository, IOAuthRepository, ISendBudget } from '../../domain/ports/index.js';
 import type { RuntimeSettingsService } from '../../infrastructure/settings/runtime-settings.js';
 import type { SecretBox } from '../../infrastructure/crypto/secret-box.js';
+import { FlowStore } from '../../infrastructure/kv/memory-flow-store.js';
+import { RedisOAuthFlowStore } from '../../infrastructure/persistence/redis-oauth-flow-store.js';
+import { Redis } from 'ioredis';
 import { env } from '../../config/env.js';
 
 export interface WorkflowDeps {
@@ -172,7 +175,9 @@ export function createApp(deps: AppDeps) {
         webUrl: wa.oauth.webUrl,
       }
     : undefined;
-  const oauthFlows = oauthDeps ? registerOAuthPublic(app, oauthDeps) : undefined;
+  const oauthFlows = oauthDeps
+    ? registerOAuthPublic(app, oauthDeps, env.redisUrl ? new RedisOAuthFlowStore(new Redis(env.redisUrl)) : new FlowStore())
+    : undefined;
 
   // Key- or OAuth-authenticated passthrough to the private engine (not Supabase sessions)
   if (wa) {

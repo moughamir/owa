@@ -37,6 +37,7 @@ import {
   InMemoryIdempotencyStore,
   InMemoryWorkflowStore,
 } from './infrastructure/workflows/memory-stores.js';
+import { RedisIdempotencyStore } from './infrastructure/workflows/redis-idempotency-store.js';
 import {
   StaticWorkflowDirectory,
   parseBindings,
@@ -228,7 +229,7 @@ const app = createApp({
     verifier: new HmacWebhookVerifier(env.openwaWebhookSecret),
     engine: new WorkflowEngine(workflowDirectory, workflowDirectory, workflowStore, replySender),
     store: workflowStore,
-    replayGuard: new InMemoryIdempotencyStore(),
+    replayGuard: env.redisUrl ? new RedisIdempotencyStore(new Redis(env.redisUrl)) : new InMemoryIdempotencyStore(),
   },
 });
 

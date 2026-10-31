@@ -69,3 +69,39 @@ export interface IOAuthRepository {
   markRefreshUsed(hash: string): Promise<boolean>;
   touchGrant(grantId: string): Promise<void>;
 }
+
+/** Flow state parked between /oauth/authorize and the token exchange (short-lived). */
+export interface OAuthPendingRequest {
+  clientId: string;
+  clientName: string;
+  redirectUri: string;
+  state: string | undefined;
+  codeChallenge: string;
+  scope: string;
+  expiresAt: number;
+}
+
+export interface OAuthPendingCode {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+  userId: string;
+  scope: string;
+  expiresAt: number;
+}
+
+/**
+ * Short-lived OAuth flow state: one `/oauth/authorize` request plus its one-time code.
+ * Implementations own expiry — an entry must not be readable after its `expiresAt`,
+ * and codes are single-use (`takeCode` reads and deletes atomically).
+ */
+export interface IOAuthFlowStore {
+  putRequest(id: string, request: OAuthPendingRequest): Promise<void>;
+  getRequest(id: string): Promise<OAuthPendingRequest | null>;
+  deleteRequest(id: string): Promise<void>;
+  putCode(hash: string, code: OAuthPendingCode): Promise<void>;
+  /** Atomic single-use read: returns the code and removes it, or null. */
+  takeCode(hash: string): Promise<OAuthPendingCode | null>;
+  /** Best-effort expired-entry cleanup; a no-op for stores with native TTLs. */
+  sweep(now?: number): void;
+}
