@@ -1,7 +1,7 @@
 {
   "locale": "en",
   "lines": [
-    { "scene": "brand", "text": "Meet WaFine: WhatsApp, with an AI teammate." },
+    { "scene": "brand", "text": "Meet WaFine: WhatsApp gateway for teams." },
     { "scene": "invite", "text": "First, request an invite with your email and number." },
     { "scene": "qr", "text": "Then scan the QR in WaFine with WhatsApp, under Linked devices." },
     { "scene": "key", "text": "Create an API key. It shows once, so save it." },

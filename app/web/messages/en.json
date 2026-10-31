@@ -21,10 +21,10 @@
   },
   "og": {
     "home": {
-      "title": "Turn your WhatsApp number into an AI teammate.",
+      "title": "WaFine — WhatsApp gateway for teams.",
       "subtitle": "Connect your number, build paced auto-reply workflows, and plug it into Claude and your apps through one REST API and MCP. Invite-only. Built in Morocco.",
       "badge": "Open-core · Built on OpenWA",
-      "alt": "WaFine — Turn your WhatsApp number into an AI teammate."
+      "alt": "WaFine — WhatsApp gateway for teams."
     },
     "login": {
       "eyebrow": "Sign in",
