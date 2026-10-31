@@ -9,7 +9,7 @@ the OpenWA HTTP + MCP surface (`OpenWA/docs/06-api-specification.md`, `OpenWA/do
 
 ## 1. Goal
 
-Turn the existing WaaSel BFF (hexagonal, E2E envelope encryption) into the **agentic core** the
+Turn the existing WaFine BFF (hexagonal, E2E envelope encryption) into the **agentic core** the
 ARD specifies: an OpenWA REST client, an MCP client factory for 10+ servers, a markdown skills
 engine, a Redis/BullMQ workflow queue, and dependency-aware health endpoints — without breaking
 the crypto/storage/auth layers already in place.
