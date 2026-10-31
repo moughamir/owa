@@ -1,24 +1,134 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
+import { Link } from '@/i18n/navigation';
+import { AppHeader } from '@/components/app-header';
+import { Alert } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { CopyField } from '@/components/copy-field';
+import { getMe, getWaConnectInfo, getWaSession, type WaSession } from '@/lib/bff';
 import { getSession, isSessionExpired } from '@/lib/session';
 
 export default function AgentBuilderPage() {
+  const t = useTranslations('agentBuilderPage');
   const router = useRouter();
+  const [phone, setPhone] = useState<string | null>(null);
+  const [session, setSession] = useState<WaSession | null>(null);
+  const [info, setInfo] = useState<{ mcpUrl: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const session = getSession();
-    if (!session || isSessionExpired()) {
+    const s = getSession();
+    if (!s || isSessionExpired()) {
       router.push('/auth/login');
       return;
     }
-  }, [router]);
+    let active = true;
+    Promise.all([getMe(), getWaConnectInfo()])
+      .then(async ([me, ci]) => {
+        if (!active) return;
+        setPhone(me.phone);
+        setInfo({ mcpUrl: ci.mcpUrl });
+        try {
+          const r = await getWaSession();
+          if (active) setSession(r.session);
+        } catch {
+          if (active) setSession(null);
+        }
+        if (active) setLoading(false);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (err instanceof Error && err.message) setError(err.message);
+        else setError(t('loadFailed'));
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [router, t]);
+
+  if (loading) {
+    return (
+      <main className="mx-auto w-full max-w-3xl p-4">
+        <AppHeader phone={phone} />
+        <p className="flex items-center gap-2 text-base-content/75" role="status">
+          <span className="loading loading-spinner loading-sm" />
+          {t('loading')}
+        </p>
+      </main>
+    );
+  }
+
+  const ready = !!session && session.status === 'ready';
 
   return (
-    <div className="p-4">
-      <h1 className="mb-4 text-2xl font-bold">Agent Builder</h1>
-      <p className="text-base-content/60">Build and configure agents.</p>
-    </div>
+    <main className="mx-auto w-full max-w-3xl p-4">
+      <AppHeader phone={phone} />
+      <header className="mb-4">
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <p className="text-sm text-base-content/75">{t('subtitle')}</p>
+      </header>
+
+      {error && (
+        <Alert variant="error" role="alert" className="mb-4">
+          <span>{error}</span>
+        </Alert>
+      )}
+
+      <Card variant="bordered" className="mb-4">
+        <div className="card-body gap-3">
+          <h2 className="card-title text-lg">{t('statusTitle')}</h2>
+          <div className="flex items-center gap-2">
+            <span className={`badge ${ready ? 'badge-success' : 'badge-warning'}`}>
+              {ready ? t('statusReady') : t('statusMissing')}
+            </span>
+          </div>
+          {!ready && <p className="text-sm text-base-content/75">{t('noSessionHint')}</p>}
+          <div className="card-actions">
+            <Link href="/whatsapp" className="btn btn-primary btn-sm">
+              {t('openWhatsapp')}
+            </Link>
+          </div>
+        </div>
+      </Card>
+
+      {ready && info && (
+        <Card variant="bordered" className="mb-4">
+          <div className="card-body gap-3">
+            <h2 className="card-title text-lg">{t('endpointTitle')}</h2>
+            <p className="text-sm text-base-content/75">{t('endpointHint')}</p>
+            <CopyField label="MCP" value={info.mcpUrl} />
+          </div>
+        </Card>
+      )}
+
+      <Card variant="bordered" className="mb-4">
+        <div className="card-body gap-3">
+          <h2 className="card-title text-lg">{t('docsTitle')}</h2>
+          <p className="text-sm text-base-content/75">{t('docsBody')}</p>
+        </div>
+      </Card>
+
+      <ol className="space-y-3">
+        {[
+          { title: t('step1Title'), body: t('step1Body') },
+          { title: t('step2Title'), body: t('step2Body') },
+          { title: t('step3Title'), body: t('step3Body') },
+        ].map((step, i) => (
+          <li key={i} className="card border border-base-300 bg-base-100">
+            <div className="card-body gap-1 p-4">
+              <h3 className="font-semibold">
+                {i + 1}. {step.title}
+              </h3>
+              <p className="text-sm text-base-content/75">{step.body}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </main>
   );
 }

@@ -7,7 +7,8 @@ import { AppHeader } from '@/components/app-header';
 import { ApiError, getMe } from '@/lib/bff';
 import { getSession, isSessionExpired } from '@/lib/session';
 import { AllowlistTab } from './allowlist-tab';
-import { ComingSoonTab } from './coming-soon-tab';
+import { BillingTab } from './billing-tab';
+import { CrmTab } from './crm-tab';
 import { SendLimitsTab } from './send-limits-tab';
 import { SessionsTab } from './sessions-tab';
 import { UsersTab } from './users-tab';
@@ -31,9 +32,9 @@ function renderTab(id: TabId, permissions: string[], labels: { billing: string; 
     case 'waitlist':
       return <WaitlistTab canDecide={can.decideWaitlist} canRemove={can.removeWaitlist} />;
     case 'billing':
-      return <ComingSoonTab title={labels.billing} />;
+      return <BillingTab />;
     case 'crm':
-      return <ComingSoonTab title={labels.crm} />;
+      return <CrmTab />;
   }
 }
 
