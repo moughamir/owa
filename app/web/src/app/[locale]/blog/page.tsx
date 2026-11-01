@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { publishedPosts } from '@/lib/blog';
 
@@ -14,26 +15,27 @@ const dateFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 });
 
-export default function BlogIndexPage() {
+export default async function BlogIndexPage() {
+  const t = await getTranslations('blog');
   const posts = publishedPosts();
   return (
     <>
       <header>
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary">Blog</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-primary">{t('eyebrow')}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">
-          News from the WaFine team
+          {t('indexTitle')}
         </h1>
         <p className="mt-3 text-base-content/75">
-          Product announcements, launch notes and deep dives.{' '}
+          {t('indexLead')}{' '}
           <a href="/blog/rss.xml" className="link-primary">
-            Subscribe via RSS
+            {t('rss')}
           </a>
           .
         </p>
       </header>
 
       {posts.length === 0 ? (
-        <p className="mt-12 text-base-content/75">No posts published yet — check back soon.</p>
+        <p className="mt-12 text-base-content/75">{t('empty')}</p>
       ) : (
         <ul className="mt-12 space-y-10">
           {posts.map((post) => (
@@ -43,8 +45,8 @@ export default function BlogIndexPage() {
                   {dateFormatter.format(post.date)}
                 </time>
                 {' · '}
-                {post.readingMinutes} min read
-                {post.draft ? ' · Draft' : ''}
+                {t('minRead', { minutes: post.readingMinutes })}
+                {post.draft ? ` · ${t('draft')}` : ''}
               </p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight">
                 <Link href={`/blog/${post.slug}`} className="hover:underline">
@@ -54,7 +56,7 @@ export default function BlogIndexPage() {
               <p className="mt-2 text-base-content/75">{post.description}</p>
               <p className="mt-3 text-sm text-base-content/75">{post.author}</p>
               {post.tags.length > 0 ? (
-                <ul className="mt-3 flex flex-wrap gap-2" aria-label="Tags">
+                <ul className="mt-3 flex flex-wrap gap-2" aria-label={t('tags')}>
                   {post.tags.map((tag) => (
                     <li
                       key={tag}

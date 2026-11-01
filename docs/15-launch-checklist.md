@@ -52,6 +52,10 @@ WEB_URL=https://app.example.com
 PUBLIC_API_URL=https://api.example.com
 ```
 
+Encrypted backups are part of the same steady state: `BACKUP_AGE_RECIPIENT` (the `age` public
+key) must be in `/opt/wa/stack/.env`, or the nightly `stack/backup.sh` fails loudly but safely on
+purpose — no plaintext fallback. Keypair, restore test and rotation: `docs/14-encrypted-backups.md`.
+
 **Apply via runbook flow:**
 - Edit `/opt/wa/stack/.env` on the VM.
 - Run `./stack/wa up -d` (or `scripts/deploy.sh` as appropriate) to restart services that need the new values.
@@ -63,6 +67,9 @@ ssh <vm-host> 'grep -E "^(WEB_URL|PUBLIC_API_URL)=" /opt/wa/stack/.env'
 ssh <vm-host> 'curl -s http://127.0.0.1:4000/health/ready'
 ```
 `/health/ready` must return 200.
+
+Uptime and alerting after launch (HEALTH_URL_* repo variables for `nightly-health`, an external
+hosted monitor, optional `METRICS_TOKEN` scrape): `docs/16-uptime-alerts.md`.
 
 ## (d) DNS records for web, api, docs
 

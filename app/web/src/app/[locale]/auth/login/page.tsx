@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@/i18n/navigation';
 import { useRouter } from '@/i18n/navigation';
 import { AuthShell, Field, buttonClass } from '@/components/auth-form';
@@ -17,6 +17,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The magic-link teaser forwards any same-origin `next` target along.
+  const [magicHref, setMagicHref] = useState('/auth/magic');
+
+  useEffect(() => {
+    const next = safeNext(new URLSearchParams(window.location.search).get('next'));
+    if (next)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMagicHref(`/auth/magic?next=${encodeURIComponent(next)}`);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +77,11 @@ export default function LoginPage() {
           {loading ? <span className="loading loading-spinner loading-sm" /> : null}
           {loading ? t('submitting') : t('submit')}
         </button>
+        <p className="text-center text-sm">
+          <Link href={magicHref} className="link link-primary">
+            {t('magicTeaser')}
+          </Link>
+        </p>
       </form>
       <p className="text-center text-sm text-base-content/75">
         {t('invited')}{' '}

@@ -11,6 +11,7 @@ import {
   type OAuthRequestInfo,
 } from '@/lib/bff';
 import { getSession, isSessionExpired } from '@/lib/session';
+import { useTranslations } from 'next-intl';
 import { useClientValue, useHydrated } from '@/lib/use-client-value';
 
 const readRequestId = () => new URLSearchParams(window.location.search).get('request');
@@ -25,13 +26,14 @@ const readRequestId = () => new URLSearchParams(window.location.search).get('req
  */
 export function OAuthConsent({ locale }: { locale: string }) {
   const router = useRouter();
+  const t = useTranslations('consent');
   // The request id comes from the URL, read after hydration (null on the server).
   const hydrated = useHydrated();
   const requestId = useClientValue(readRequestId, null);
   const [info, setInfo] = useState<OAuthRequestInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const error = hydrated && !requestId ? 'Missing sign-in request. Start again from Claude.' : failure;
+  const error = hydrated && !requestId ? t('missingRequest') : failure;
 
   useEffect(() => {
     const id = requestId;
@@ -47,7 +49,7 @@ export function OAuthConsent({ locale }: { locale: string }) {
         if (err instanceof ApiError && err.status === 401) {
           router.push(`/${locale}/auth/login?next=${encodeURIComponent(here)}`);
         } else {
-          setFailure(err instanceof Error ? err.message : 'This sign-in request is no longer valid.');
+          setFailure(err instanceof Error ? err.message : t('invalidRequest'));
         }
       });
   }, [router, requestId, locale]);
@@ -67,33 +69,30 @@ export function OAuthConsent({ locale }: { locale: string }) {
 
   return (
     <main className="mx-auto max-w-md p-6">
-      <h1 className="mb-4 text-2xl font-semibold">Connect to your WhatsApp</h1>
+      <h1 className="mb-4 text-2xl font-semibold">{t('title')}</h1>
       {error && <p className="mb-4 rounded-sm border border-red-300 p-2 text-sm text-red-600">{error}</p>}
-      {!info && !error && <p className="text-base-content/60">Loading…</p>}
+      {!info && !error && <p className="text-base-content/60">{t('loading')}</p>}
       {info && (
         <>
           <p className="mb-3">
-            <strong>{info.clientName}</strong> wants to use your WhatsApp account through{' '}
-            the WaFine MCP connector.
+            {t.rich('wantsAccess', { client: info.clientName, strong: (chunks) => <strong>{chunks}</strong> })}
           </p>
           <ul className="mb-4 list-disc pl-5 text-sm">
-            <li>Read your chats, messages, contacts and groups.</li>
-            <li>Send messages from your number on your behalf.</li>
-            <li>Only your own WhatsApp session. You can disconnect it any time on the WhatsApp page.</li>
+            <li>{t('scopeRead')}</li>
+            <li>{t('scopeSend')}</li>
+            <li>{t('scopeSession')}</li>
           </ul>
           <p className="mb-4 text-sm">
-            After you approve, you go back to <strong>{info.redirectHost}</strong>.
+            {t.rich('redirectBack', { host: info.redirectHost, strong: (chunks) => <strong>{chunks}</strong> })}
           </p>
           {info.loopback && (
             <p className="mb-4 rounded-sm border border-yellow-400 p-2 text-sm">
-              This app returns to a program on this computer ({info.redirectHost}). Approve only if you just started
-              the connection yourself, for example from Claude Code.
+              {t('loopbackWarning', { host: info.redirectHost })}
             </p>
           )}
           {!info.hasSession ? (
             <p className="mb-4 text-sm">
-              You have no WhatsApp session yet. <Link href="/whatsapp" className="text-primary underline">Create it and scan the QR</Link>,
-              then start the connection again from Claude.
+              {t.rich('noSession', { link: (chunks) => <Link href="/whatsapp" className="text-primary underline">{chunks}</Link> })}
             </p>
           ) : (
             <div className="flex gap-3">
@@ -103,7 +102,7 @@ export function OAuthConsent({ locale }: { locale: string }) {
                 onClick={() => void decide(true)}
                 className="btn btn-primary btn-sm disabled:opacity-50"
               >
-                Allow
+                {t('allow')}
               </button>
               <button
                 type="button"
@@ -111,7 +110,7 @@ export function OAuthConsent({ locale }: { locale: string }) {
                 onClick={() => void decide(false)}
                 className="rounded-sm border px-4 py-2 disabled:opacity-50"
               >
-                Deny
+                {t('deny')}
               </button>
             </div>
           )}

@@ -22,6 +22,9 @@ export function WaitlistTab({ canDecide, canRemove }: { canDecide: boolean; canR
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  // Success (e-mail went out) and warning (invite saved but no e-mail) notices one-shot per action.
+  const [good, setGood] = useState<string | null>(null);
+  const [warn, setWarn] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
@@ -46,7 +49,7 @@ export function WaitlistTab({ canDecide, canRemove }: { canDecide: boolean; canR
     if (details) setDetails(await getWaitlistDetails(details.entry.id));
   }
   async function run(operation: () => Promise<unknown>) {
-    setBusy(true); setNotice(null);
+    setBusy(true); setNotice(null); setGood(null); setWarn(null);
     try { await operation(); }
     catch (err) { setNotice(err instanceof Error ? err.message : t('requestFailed')); }
     // Refresh even after a failure: a bulk action can commit some leads before one fails.
@@ -56,7 +59,17 @@ export function WaitlistTab({ canDecide, canRemove }: { canDecide: boolean; canR
   async function invite(entry: WaitlistEntry) {
     const phone = resolveInvitePhone(entry, drafts[entry.id] ?? '');
     if (!phone.ok) { setNotice(t(phone.error === 'invalid' ? 'phoneInvalid' : 'phoneMissing')); return; }
-    await run(() => inviteWaitlistEntry(entry.id, phone.phone));
+    setBusy(true); setNotice(null); setGood(null); setWarn(null);
+    try {
+      const result = await inviteWaitlistEntry(entry.id, phone.phone);
+      // `emailSent` false means the number was allowlisted but the invite e-mail failed.
+      if (result.emailSent === false) setWarn(t('invitedAllowlistOnly'));
+      else setGood(t('invitedEmail'));
+    }
+    catch (err) { setNotice(err instanceof Error ? err.message : t('requestFailed')); }
+    // Refresh even after a failure: the entry may have been marked invited before the e-mail failed.
+    try { await refresh(); } catch { /* the operation's notice already explains the failure */ }
+    finally { setBusy(false); }
   }
   async function openDetails(entry: WaitlistEntry) {
     setDetails(null);
@@ -84,6 +97,8 @@ export function WaitlistTab({ canDecide, canRemove }: { canDecide: boolean; canR
     </div>
     {loadFailed && <div role="alert" className="alert alert-error mb-4">{t('loadFailed')}</div>}
     {notice && <div role="alert" className="alert alert-error mb-4">{notice}</div>}
+    {good && <div role="status" className="alert alert-success mb-4">{good}</div>}
+    {warn && <div role="status" className="alert alert-warning mb-4">{warn}</div>}
     {page && page.sourceCounts.length > 0 && <section aria-labelledby="waitlist-sources-title" className="mb-6">
       <h3 id="waitlist-sources-title" className="mb-2 font-semibold">{t('sourceCountsTitle')}</h3><div className="overflow-x-auto rounded-box border border-base-300"><table className="table table-sm"><thead><tr><th>{t('source')}</th><th>{t('sourceValue')}</th><th>{t('sourceTotal')}</th><th>{t('sourceLast7Days')}</th></tr></thead><tbody>{page.sourceCounts.map((item) => <tr key={`${item.field}:${item.value}`}><td>{t(item.field === 'ref' ? 'sourceRef' : item.field === 'utm_source' ? 'utmSource' : 'utmCampaign')}</td><td className="break-all font-mono text-sm">{item.value}</td><td>{item.total}</td><td>{item.last7Days}</td></tr>)}</tbody></table></div>
     </section>}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
  * A destructive button that asks for confirmation in place instead of `window.confirm`.
@@ -25,6 +26,7 @@ export function InlineConfirm({
   tone?: 'error' | 'warning' | 'primary';
 }) {
   const [asking, setAsking] = useState(false);
+  const t = useTranslations('admin.common');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
@@ -86,7 +88,7 @@ export function InlineConfirm({
         {confirmLabel ?? label}
       </button>
       <button ref={cancelRef} type="button" onClick={close} className="btn btn-ghost btn-sm h-11 min-h-11">
-        Cancel
+        {t('cancel')}
       </button>
     </div>
   );

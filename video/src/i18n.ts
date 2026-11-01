@@ -8,7 +8,7 @@ export type Locale = (typeof LOCALES)[number];
 const en = {
   step: (n: number) => `Step ${n} of 6`,
   brand: {
-    tagline: 'Turn your WhatsApp number into an AI teammate.',
+    tagline: 'WaFine — WhatsApp gateway for teams.',
     badge: 'Invite-only · Built in Morocco',
     caption: 'A six-step tour of WaFine, from invite to Claude.',
   },

@@ -83,7 +83,7 @@ export default function SettingsPage() {
           <EmailSection account={account} apiError={apiError} />
           <PasswordSection apiError={apiError} />
           <Section title={t('whatsapp.title')}>
-            <p dir="ltr" className="font-mono text-base rtl:text-right">
+            <p dir="ltr" className="font-mono text-base text-end">
               {account.phone ?? t('whatsapp.none')}
             </p>
             <p className="text-sm text-base-content/75">{t('whatsapp.readOnly')}</p>

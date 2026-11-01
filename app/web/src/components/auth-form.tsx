@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 export function AuthShell({ title, children }: { title: string; children: ReactNode }) {
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-base-200 p-4">
-      <div className="absolute right-3 top-3">
+      <div className="absolute end-3 top-3">
         <ThemeToggle />
       </div>
       <div className="w-full max-w-sm space-y-6">

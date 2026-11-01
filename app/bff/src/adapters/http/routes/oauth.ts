@@ -18,12 +18,14 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypt
 import { Hono, type Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type {
+  IOAuthFlowStore,
   IOAuthRepository,
   IWaTenancyRepository,
   IWhatsAppGateway,
 } from '../../../domain/ports/index.js';
 import type { SecretBox } from '../../../infrastructure/crypto/secret-box.js';
 import { TokenBucketRateLimiter } from '../../../infrastructure/auth/rate-limit.js';
+import { FlowStore } from '../../../infrastructure/kv/memory-flow-store.js';
 import { sha256Hex } from './wa.js';
 // Shared with app.ts: trusts only the rightmost TRUSTED_PROXY_HOPS x-forwarded-for
 // entries (see ../client-ip.ts for the trust model); never the leftmost entry. The
@@ -80,34 +82,7 @@ const safeEqual = (a: string, b: string) =>
 
 const newToken = (prefix: string) => `${prefix}${randomBytes(32).toString('base64url')}`;
 
-interface PendingRequest {
-  clientId: string;
-  clientName: string;
-  redirectUri: string;
-  state: string | undefined;
-  codeChallenge: string;
-  scope: string;
-  expiresAt: number;
-}
-
-interface PendingCode {
-  clientId: string;
-  redirectUri: string;
-  codeChallenge: string;
-  userId: string;
-  scope: string;
-  expiresAt: number;
-}
-
-/** Short-lived flow state. In memory: a BFF restart only cancels in-flight sign-ins. */
-class FlowStore {
-  readonly requests = new Map<string, PendingRequest>();
-  readonly codes = new Map<string, PendingCode>();
-  sweep(now = Date.now()) {
-    for (const [k, v] of this.requests) if (v.expiresAt < now) this.requests.delete(k);
-    for (const [k, v] of this.codes) if (v.expiresAt < now) this.codes.delete(k);
-  }
-}
+/** Flow state backing store is injectable: memory (tests, dev) or Valkey (see create-stores). */
 
 export interface OAuthDeps {
   oauth: IOAuthRepository;
@@ -167,7 +142,7 @@ async function readParams(c: Context): Promise<Record<string, string>> {
 }
 
 /** Public OAuth endpoints and metadata. Mount at the app root. */
-export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new FlowStore()) {
+export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows: IOAuthFlowStore = new FlowStore()) {
   const issuer = deps.publicApiUrl.replace(/\/$/, '');
   const limiter = new TokenBucketRateLimiter();
   // Same client-IP trust model as app.ts, fed from config/env.ts.
@@ -263,7 +238,7 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
     if (!scope) return fail('invalid_scope', 'Unsupported scope');
 
     const requestId = randomBytes(18).toString('base64url');
-    flows.requests.set(requestId, {
+    await flows.putRequest(requestId, {
       clientId: client.clientId,
       clientName: client.clientName,
       redirectUri,
@@ -319,8 +294,7 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
 
     if (p['grant_type'] === 'authorization_code') {
       const codeHash = p['code'] ? sha256Hex(p['code']) : '';
-      const code = flows.codes.get(codeHash);
-      flows.codes.delete(codeHash); // single use, even when the exchange fails
+      const code = await flows.takeCode(codeHash);
       if (!code || code.expiresAt < Date.now() || code.clientId !== clientId) {
         return oauthError(c, 400, 'invalid_grant', 'Invalid or expired code');
       }
@@ -415,19 +389,19 @@ export function registerOAuthPublic(app: Hono, deps: OAuthDeps, flows = new Flow
 }
 
 /** Consent + connected apps, behind the Supabase auth middleware. Mount at /api/oauth. */
-export function oauthUserRoutes(deps: OAuthDeps, flows: FlowStore): Hono {
+export function oauthUserRoutes(deps: OAuthDeps, flows: IOAuthFlowStore): Hono {
   const r = new Hono();
   const issuer = deps.publicApiUrl.replace(/\/$/, '');
 
-  function pending(id: string) {
+  async function pending(id: string) {
     flows.sweep();
-    const req = flows.requests.get(id);
+    const req = await flows.getRequest(id);
     if (!req) throw new HTTPException(404, { message: 'This sign-in request expired. Start again from Claude.' });
     return req;
   }
 
   r.get('/requests/:id', async (c) => {
-    const req = pending(c.req.param('id'));
+    const req = await pending(c.req.param('id'));
     const session = await deps.tenancy.getSession(c.get('auth').userId);
     return c.json({
       clientName: req.clientName,
@@ -440,14 +414,14 @@ export function oauthUserRoutes(deps: OAuthDeps, flows: FlowStore): Hono {
 
   r.post('/requests/:id/approve', async (c) => {
     const id = c.req.param('id');
-    const req = pending(id);
+    const req = await pending(id);
     const userId = c.get('auth').userId;
     if (!(await deps.tenancy.getSession(userId))) {
       throw new HTTPException(409, { message: 'Create your WhatsApp session first.' });
     }
-    flows.requests.delete(id);
+    await flows.deleteRequest(id);
     const code = randomBytes(32).toString('base64url');
-    flows.codes.set(sha256Hex(code), {
+    await flows.putCode(sha256Hex(code), {
       clientId: req.clientId,
       redirectUri: req.redirectUri,
       codeChallenge: req.codeChallenge,
@@ -458,10 +432,10 @@ export function oauthUserRoutes(deps: OAuthDeps, flows: FlowStore): Hono {
     return c.json({ redirectTo: withParams(req.redirectUri, { code, state: req.state, iss: issuer }) });
   });
 
-  r.post('/requests/:id/deny', (c) => {
+  r.post('/requests/:id/deny', async (c) => {
     const id = c.req.param('id');
-    const req = pending(id);
-    flows.requests.delete(id);
+    const req = await pending(id);
+    await flows.deleteRequest(id);
     return c.json({
       redirectTo: withParams(req.redirectUri, { error: 'access_denied', state: req.state, iss: issuer }),
     });

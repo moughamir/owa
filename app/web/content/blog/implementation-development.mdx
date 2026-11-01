@@ -1,6 +1,6 @@
 ---
 title: "Implementation and Development — Stack, Agents Workflow, Skills Folder"
-description: "The tech stack (Bun, Hono, oRPC, Drizzle, Next.js, Tailwind, Valkey), the agentic workflow (captain, workers, review gate), and the skills/ folder that encodes repeatable procedures."
+description: "The tech stack (Bun, Hono, Drizzle, Next.js, Tailwind, Valkey), the agentic workflow (captain, workers, review gate), and the skills/ folder that encodes repeatable procedures."
 date: 2026-10-18
 author: "Mohamed Moughamir with the WaFine agents"
 tags: [implementation, stack, agents, workflow, skills]
@@ -10,10 +10,10 @@ stage: evaluate
 
 ## Stack
 
-**BFF (`app/bff/`).** Hono + oRPC + Bun + Drizzle ORM. Hexagonal architecture:
+**BFF (`app/bff/`).** Hono + Bun + Drizzle ORM. Hexagonal architecture:
 - Domain layer: ports, entities, value objects, services (EncryptionService, KeyManagementService, BlindIndexService, PacedReplySender, SendBudgetService)
 - Infrastructure: XChaCha20-Poly1305, HMAC blind index, Argon2id KDF, Valkey (BullMQ, noeviction), R2/OCI S3 storage adapter, auth middleware, rate limiter
-- Adapters: Hono app assembly with middleware stack, oRPC procedures, HTTP routes
+- Adapters: Hono app assembly with middleware stack, HTTP routes
 
 **Web (`app/web/`).** Next.js 15 (App Router) + Tailwind CSS 4 + daisyUI 5 (themes `wafine-light`, `wafine-dark`). White-labeled via CSS custom properties. i18n via `next-intl` with `[locale]` segment (EN/FR/AR, RTL). Components in `src/components/ui/` (Button, Badge, Card, Field, Alert, SectionHeading). MDX blog via `next-mdx-remote` + gray-matter + zod.
 

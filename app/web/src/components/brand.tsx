@@ -1,3 +1,6 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { BRAND_BUBBLE_PATH, BRAND_WORD_PATH, BRAND_WORD_TRANSFORM } from '@/lib/brand-paths';
 
@@ -54,6 +57,7 @@ export function Brand({
   className?: string;
   inverted?: boolean;
 }) {
+  const t = useTranslations('brand');
   const body = (
     <span className={`inline-flex items-center gap-2 ${className ?? ''}`}>
       <BrandMark size={size} inverted={inverted} className="shrink-0" />
@@ -64,7 +68,7 @@ export function Brand({
 
   if (!href) return body;
   return (
-    <Link href={href} className="inline-flex min-h-11 items-center rounded-field px-2" aria-label="WaFine home">
+    <Link href={href} className="inline-flex min-h-11 items-center rounded-field px-2" aria-label={t('home')}>
       {body}
     </Link>
   );

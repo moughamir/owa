@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, useCallback, useEffect, useId, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   adminRevokeGrant,
   adminRevokeKey,
@@ -27,16 +28,24 @@ const PROGRESS_CLASS = { ok: 'progress-primary', warn: 'progress-warning', full:
 
 /** Every WhatsApp session with today's API usage, its per-session cap override, keys and Claude grants. */
 export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }: { canManageLimits: boolean; canRevokeKeys: boolean; canRevokeGrants: boolean }) {
+  const t = useTranslations('admin.sessions');
+  const tc = useTranslations('admin.common');
   const [sessions, setSessions] = useState<AdminSession[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const reload = useCallback(() => listAdminSessions().then(setSessions), []);
+  const reload = useCallback(() => listAdminSessions().then((list) => {
+    setSessions(list);
+    setLoadFailed(false);
+  }), []);
 
   useEffect(() => {
-    reload().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
+    reload().catch(() => setLoadFailed(true));
   }, [reload]);
+
+  const shownError = error ?? (loadFailed ? tc('loadFailed') : null);
 
   /** Run a mutation, then refetch so usage, caps and lists reflect the server. */
   async function run(action: () => Promise<unknown>): Promise<boolean> {
@@ -47,7 +56,7 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
       await reload();
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : tc('requestFailed'));
       return false;
     } finally {
       setBusy(false);
@@ -57,13 +66,13 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
   const header = (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
       <div>
-        <h2 className="text-xl font-bold">Sessions &amp; usage</h2>
+        <h2 className="text-xl font-bold">{t('title')}</h2>
         <p className="text-sm text-base-content/75">
-          API sends today against each session&apos;s daily cap. Phone and WhatsApp Web messages never count.
+          {t('intro')}
         </p>
       </div>
       <button type="button" disabled={busy} onClick={() => void run(async () => {})} className="btn btn-outline">
-        Refresh
+        {tc('refresh')}
       </button>
     </div>
   );
@@ -72,14 +81,14 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
     return (
       <>
         {header}
-        {error ? (
+        {shownError ? (
           <div role="alert" className="alert alert-error">
-            <span>{error}</span>
+            <span>{shownError}</span>
           </div>
         ) : (
           <p className="flex items-center gap-2 text-base-content/75">
             <span className="loading loading-spinner loading-sm" />
-            Loading…
+            {tc('loading')}
           </p>
         )}
       </>
@@ -91,15 +100,15 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
   return (
     <>
       {header}
-      {error && (
+      {shownError && (
         <div role="alert" className="alert alert-error mb-4">
-          <span>{error}</span>
+          <span>{shownError}</span>
         </div>
       )}
 
       {sessions.length === 0 ? (
         <div className="alert">
-          <span>No WhatsApp sessions yet.</span>
+          <span>{t('empty')}</span>
         </div>
       ) : (
         <>
@@ -108,11 +117,11 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
             <table className="table">
               <thead>
                 <tr>
-                  <th>User</th>
-                  <th>Session</th>
-                  <th>Status</th>
-                  <th className="min-w-48">API sends today</th>
-                  <th>Resets in</th>
+                  <th>{t('colUser')}</th>
+                  <th>{t('colSession')}</th>
+                  <th>{t('colStatus')}</th>
+                  <th className="min-w-48">{t('colUsage')}</th>
+                  <th>{t('colResets')}</th>
                   <th />
                 </tr>
               </thead>
@@ -135,7 +144,7 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
                         <UsageBar session={s} />
                       </td>
                       <td className="whitespace-nowrap text-sm">{formatDuration(s.usage.resetsInSeconds)}</td>
-                      <td className="text-right">
+                      <td className="text-end">
                         <ManageButton
                           session={s}
                           controls={`session-detail-t-${s.openwaSessionId}`}
@@ -175,7 +184,7 @@ export function SessionsTab({ canManageLimits, canRevokeKeys, canRevokeGrants }:
                 <div className="mt-2">
                   <UsageBar session={s} />
                   <p className="mt-1 text-xs text-base-content/75">
-                    Resets in {formatDuration(s.usage.resetsInSeconds)}
+                    {t('resetsIn', { duration: formatDuration(s.usage.resetsInSeconds) })}
                   </p>
                 </div>
                 <div className="mt-1">
@@ -206,6 +215,7 @@ function StatusBadge({ status }: { status: string | null }) {
 }
 
 function UsageBar({ session }: { session: AdminSession }) {
+  const t = useTranslations('admin.sessions');
   const { today, perDay, perMinute } = session.usage;
   const level = usageLevel(today, perDay);
   return (
@@ -214,15 +224,15 @@ function UsageBar({ session }: { session: AdminSession }) {
         <span>
           <span className="font-semibold">{today.toLocaleString()}</span> / {perDay.toLocaleString()}
         </span>
-        {session.override && <span className="badge badge-outline badge-sm">override</span>}
+        {session.override && <span className="badge badge-outline badge-sm">{t('overrideBadge')}</span>}
       </div>
       <progress
         className={`progress h-2 w-full ${PROGRESS_CLASS[level]}`}
         value={usagePercent(today, perDay)}
         max={100}
-        aria-label={`${today} of ${perDay} API sends used today`}
+        aria-label={t('usageAria', { today, perDay })}
       />
-      <p className="text-xs text-base-content/75">{perMinute.toLocaleString()} / min</p>
+      <p className="text-xs text-base-content/75">{t('perMinute', { count: perMinute.toLocaleString() })}</p>
     </div>
   );
 }
@@ -241,6 +251,7 @@ function ManageButton({
   onToggle: (id: string) => void;
   canManage: boolean;
 }) {
+  const t = useTranslations('admin.sessions');
   return (
     <button
       type="button"
@@ -249,7 +260,7 @@ function ManageButton({
       aria-controls={controls}
       className="btn btn-ghost btn-sm h-11 min-h-11"
     >
-      {open ? 'Close' : canManage ? 'Manage' : 'View'}
+      {open ? t('close') : canManage ? t('manage') : t('view')}
       <span className="sr-only"> {session.email ?? session.name}</span>
     </button>
   );
@@ -293,6 +304,7 @@ function OverrideEditor({
   canManage: boolean;
 }) {
   const uid = useId();
+  const t = useTranslations('admin.sessions');
   const [form, setForm] = useState<OverrideForm>(() => overrideToForm(session.override));
   const [errors, setErrors] = useState<FieldErrors<keyof OverrideForm>>({});
 
@@ -319,14 +331,14 @@ function OverrideEditor({
   }
 
   const fields: Array<{ key: keyof OverrideForm; label: string }> = [
-    { key: 'perDay', label: 'Per day' },
-    { key: 'perMinute', label: 'Per minute' },
+    { key: 'perDay', label: t('perDay') },
+    { key: 'perMinute', label: t('perMinuteLabel') },
   ];
 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-2">
-      <h3 className="text-sm font-semibold">Cap override for this session</h3>
-      <p className="text-xs text-base-content/75">Leave a field blank to use the global cap.</p>
+      <h3 className="text-sm font-semibold">{t('capTitle')}</h3>
+      <p className="text-xs text-base-content/75">{t('capIntro')}</p>
       <div className="grid grid-cols-2 gap-2">
         {fields.map(({ key, label }) => {
           const id = `${uid}-${key}`;
@@ -344,7 +356,7 @@ function OverrideEditor({
                 pattern="[0-9]*"
                 autoComplete="off"
                 readOnly={!canManage}
-                placeholder="global"
+                placeholder={t('globalPlaceholder')}
                 value={form[key]}
                 onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 aria-invalid={err ? true : undefined}
@@ -360,7 +372,7 @@ function OverrideEditor({
       </div>
       {canManage && <div className="flex flex-wrap gap-2">
         <button type="submit" disabled={busy} className="btn btn-primary btn-sm h-11 min-h-11">
-          Save override
+          {t('saveOverride')}
         </button>
         {session.override && (
           <button
@@ -372,7 +384,7 @@ function OverrideEditor({
             }}
             className="btn btn-ghost btn-sm h-11 min-h-11"
           >
-            Clear override
+            {t('clearOverride')}
           </button>
         )}
       </div>}
@@ -391,11 +403,12 @@ function KeysList({
   run: (action: () => Promise<unknown>) => Promise<boolean>;
   canRevoke: boolean;
 }) {
+  const t = useTranslations('admin.sessions');
   return (
     <div>
-      <h3 className="mb-1 text-sm font-semibold">API keys</h3>
+      <h3 className="mb-1 text-sm font-semibold">{t('apiKeys')}</h3>
       {session.keys.length === 0 ? (
-        <p className="text-sm text-base-content/75">None.</p>
+        <p className="text-sm text-base-content/75">{t('none')}</p>
       ) : (
         <ul className="divide-y divide-base-300">
           {session.keys.map((k) => (
@@ -403,20 +416,24 @@ function KeysList({
               <div className="min-w-0">
                 <span className="font-mono text-xs">{k.keyPrefix}…</span>
                 <p className="text-xs text-base-content/75">
-                  created {new Date(k.createdAt).toLocaleString()}
-                  {k.revokedAt ? ` · revoked ${new Date(k.revokedAt).toLocaleString()}` : ''}
+                  {k.revokedAt
+                    ? t('createdRevoked', {
+                        date: new Date(k.createdAt).toLocaleString(),
+                        revokedAt: new Date(k.revokedAt).toLocaleString(),
+                      })
+                    : t('created', { date: new Date(k.createdAt).toLocaleString() })}
                 </p>
               </div>
               {k.revokedAt ? (
-                <span className="badge badge-ghost badge-sm">revoked</span>
+                <span className="badge badge-ghost badge-sm">{t('revokedBadge')}</span>
               ) : canRevoke ? (
                 <InlineConfirm
-                  label="Revoke"
-                  question={`Revoke key ${k.keyPrefix}…?`}
+                  label={t('revoke')}
+                  question={t('revokeKeyQuestion', { prefix: k.keyPrefix })}
                   disabled={busy}
                   onConfirm={() => void run(() => adminRevokeKey(k.id))}
                 />
-              ) : <span className="badge badge-success badge-sm">active</span>}
+              ) : <span className="badge badge-success badge-sm">{t('active')}</span>}
             </li>
           ))}
         </ul>
@@ -436,11 +453,12 @@ function GrantsList({
   run: (action: () => Promise<unknown>) => Promise<boolean>;
   canRevoke: boolean;
 }) {
+  const t = useTranslations('admin.sessions');
   return (
     <div>
-      <h3 className="mb-1 text-sm font-semibold">Claude connectors</h3>
+      <h3 className="mb-1 text-sm font-semibold">{t('claudeConnectors')}</h3>
       {session.grants.length === 0 ? (
-        <p className="text-sm text-base-content/75">None.</p>
+        <p className="text-sm text-base-content/75">{t('none')}</p>
       ) : (
         <ul className="divide-y divide-base-300">
           {session.grants.map((g) => (
@@ -448,13 +466,17 @@ function GrantsList({
               <div className="min-w-0">
                 <span className="wrap-break-word font-medium">{g.clientName}</span>
                 <p className="text-xs text-base-content/75">
-                  connected {new Date(g.createdAt).toLocaleString()} ·{' '}
-                  {g.lastUsedAt ? `last used ${new Date(g.lastUsedAt).toLocaleString()}` : 'never used'}
+                  {[
+                    t('connected', { date: new Date(g.createdAt).toLocaleString() }),
+                    g.lastUsedAt
+                      ? t('lastUsed', { date: new Date(g.lastUsedAt).toLocaleString() })
+                      : t('neverUsed'),
+                  ].join(' · ')}
                 </p>
               </div>
               {canRevoke && <InlineConfirm
-                label="Revoke"
-                question={`Disconnect ${g.clientName}?`}
+                label={t('revoke')}
+                question={t('disconnectQuestion', { client: g.clientName })}
                 disabled={busy}
                 onConfirm={() => void run(() => adminRevokeGrant(g.grantId))}
               />}

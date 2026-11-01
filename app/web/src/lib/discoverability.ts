@@ -29,7 +29,7 @@ const CREDITS_FULL =
   'Project sponsored by Ai4x Academy. Built by ZawIA.Tech. Developed by Mohamed Moughamir (omnizya & open anaffa), supported by the CDIWG (Bouskoura.online) org. Mentored by Youssef Ghalem (YG Consulting). Open-core on OpenWA (open source).';
 
 const SUMMARY =
-  'Turn your WhatsApp number into an AI teammate. Connect your number, build paced ' +
+  'WaFine — WhatsApp gateway for teams. Connect your number, build paced ' +
   'auto-reply workflows, and plug it into Claude and your apps through one REST API ' +
   'and one MCP endpoint. Invite-only. Built in Morocco.';
 
@@ -143,7 +143,7 @@ export function llmsFullTxt(urls: DiscoverabilityUrls): string {
     '',
     '## The product',
     '',
-    `${SITE.name} turns a WhatsApp number into an AI teammate. It is an open-core gateway`,
+    `${SITE.name} is an open-core WhatsApp gateway built on OpenWA. You link a WhatsApp number`,
     'built on the open-source OpenWA engine. The web app (this site) handles accounts,',
     'sessions, keys and the waitlist; a backend-for-frontend (BFF) owns the REST and MCP',
     'surface; the OpenWA engine keeps the WhatsApp session alive on a server in Casablanca.',

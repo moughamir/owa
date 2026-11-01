@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   displayNameError,
   emailError,
+  magicLinkFromUrl,
   newPasswordError,
   normalizeDisplayName,
   recoveryTokenFromHash,
@@ -51,5 +52,51 @@ describe('recovery link', () => {
     expect(recoveryTokenFromHash('#error=access_denied&error_description=expired')).toBeNull();
     expect(recoveryTokenFromHash('#access_token=abc&type=signup')).toBeNull();
     expect(recoveryTokenFromHash('')).toBeNull();
+  });
+});
+
+describe('magic link', () => {
+  it('reads the refresh token of an implicit-flow redirect', () => {
+    expect(
+      magicLinkFromUrl({ hash: '#access_token=abc&refresh_token=r&type=invite', search: '' }),
+    ).toEqual({ kind: 'fragment', refreshToken: 'r', type: 'invite' });
+  });
+
+  it('reads the token hash of a PKCE-flow query string', () => {
+    expect(
+      magicLinkFromUrl({ hash: '', search: '?token_hash=XYZ&type=signup' }),
+    ).toEqual({ kind: 'token_hash', tokenHash: 'XYZ', type: 'signup' });
+  });
+
+  it('defaults the type to magiclink when the link omits it', () => {
+    expect(magicLinkFromUrl({ hash: '#refresh_token=r', search: '' })).toEqual({
+      kind: 'fragment',
+      refreshToken: 'r',
+      type: 'magiclink',
+    });
+    expect(magicLinkFromUrl({ hash: '', search: '?token_hash=XYZ' })).toEqual({
+      kind: 'token_hash',
+      tokenHash: 'XYZ',
+      type: 'magiclink',
+    });
+  });
+
+  it('prefers the fragment over a token hash when both are present', () => {
+    expect(magicLinkFromUrl({ hash: '#refresh_token=r&type=invite', search: '?token_hash=XYZ' })).toEqual({
+      kind: 'fragment',
+      refreshToken: 'r',
+      type: 'invite',
+    });
+  });
+
+  it('rejects a recovery link, other pages’ link kinds and an error redirect', () => {
+    expect(magicLinkFromUrl({ hash: '#refresh_token=r&type=recovery', search: '' })).toBeNull();
+    expect(magicLinkFromUrl({ hash: '#refresh_token=r&type=email_change', search: '' })).toBeNull();
+    expect(magicLinkFromUrl({ hash: '#error=access_denied&error_description=expired', search: '' })).toBeNull();
+  });
+
+  it('returns null when the link carries neither token shape', () => {
+    expect(magicLinkFromUrl({ hash: '', search: '' })).toBeNull();
+    expect(magicLinkFromUrl({ hash: '', search: '?next=/whatsapp' })).toBeNull();
   });
 });

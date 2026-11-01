@@ -75,7 +75,7 @@ The bubble mark carrying the Arabic wordmark `وافين`, plus the wordmark `Wa
 node .claude/skills/wafine-marketing/scripts/render_card.mjs \
   --lang en --size linkedin --theme pine \
   --eyebrow "Invite-only · Built in Morocco" \
-  --headline "Turn your WhatsApp number into an AI teammate." \
+  --headline "WaFine — WhatsApp gateway for teams." \
   --sub "Paced auto-replies, one REST API, one MCP endpoint." \
   --cta "Join the waitlist" --url "wafine.zawia.tech" \
   --out /tmp/wafine-card-en.png

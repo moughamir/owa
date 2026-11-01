@@ -1,12 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from '@/i18n/navigation';
 import { AppHeader } from '@/components/app-header';
 import { CopyField } from '@/components/copy-field';
+import { inputClass } from '@/components/auth-form';
 import {
   ApiError,
+  claimPhone,
   createWaKey,
   createWaSession,
   deleteWaSession,
@@ -27,6 +29,7 @@ import {
   type WaStatus,
 } from '@/lib/bff';
 import { getSession, isSessionExpired } from '@/lib/session';
+import { authErrorKey } from '@/lib/auth-errors';
 
 /** Badge color per status: green once linked, amber when a human must act, red on failure. */
 const STATUS_BADGE: Record<WaStatus, string> = {
@@ -49,6 +52,7 @@ const MAX_KEYS = 5;
 
 export default function WhatsAppPage() {
   const t = useTranslations('whatsappPage');
+  const tAuth = useTranslations('auth');
   const locale = useLocale();
   const when = (iso: string) => new Date(iso).toLocaleString(locale);
   const router = useRouter();
@@ -62,6 +66,11 @@ export default function WhatsAppPage() {
   const [newKey, setNewKey] = useState<NewWaKey | null>(null);
   const [info, setInfo] = useState<{ restBase: string; mcpUrl: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  // Locals of the finish-setup card: an invited user activates with no profile phone yet.
+  const [claimDraft, setClaimDraft] = useState('');
+  const [claiming, setClaiming] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const claimInputId = useId();
   // Localized headline plus the raw BFF detail (kept for the tooltip, not shown inline).
   const [error, setError] = useState<{ key: 'loadFailed' | 'requestFailed'; detail?: string } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -149,6 +158,22 @@ export default function WhatsAppPage() {
     void run(() => revokeConnectedApp(app.id));
   }
 
+  /** Pairs the account with the invited WhatsApp number; the BFF re-checks the allowlist. */
+  async function handleClaimSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setClaimError(null);
+    setClaiming(true);
+    try {
+      const { phone: claimed } = await claimPhone(claimDraft.trim());
+      // With a phone the finish-setup card disappears; the rest of the page stays as loaded.
+      setPhone(claimed);
+    } catch (err) {
+      setClaimError(tAuth(authErrorKey(err)));
+    } finally {
+      setClaiming(false);
+    }
+  }
+
   if (!ready) {
     return (
       <main className="mx-auto w-full max-w-2xl p-4">
@@ -179,6 +204,43 @@ export default function WhatsAppPage() {
         <div role="alert" className="alert alert-error mb-4">
           <span title={error.detail}>{t(error.key)}</span>
         </div>
+      )}
+
+      {/* ── Finish setup (invited user, phone not paired yet) ─ */}
+      {phone === null && (
+        <section className="card mb-4 border border-base-300 bg-base-100">
+          <div className="card-body gap-3">
+            <h2 className="card-title text-lg">{t('claimTitle')}</h2>
+            <p className="text-sm text-base-content/75">{t('claimIntro')}</p>
+            {claimError && (
+              <div role="alert" className="alert alert-error text-sm">
+                <span>{claimError}</span>
+              </div>
+            )}
+            <form onSubmit={handleClaimSubmit} className="space-y-3" noValidate>
+              <div>
+                <label htmlFor={claimInputId} className="mb-1.5 block text-sm font-medium">
+                  {t('claimNumber')}
+                </label>
+                <input
+                  id={claimInputId}
+                  className={`${inputClass} font-mono`}
+                  type="tel"
+                  inputMode="tel"
+                  dir="ltr"
+                  value={claimDraft}
+                  onChange={(e) => setClaimDraft(e.target.value)}
+                  autoComplete="tel"
+                  required
+                />
+              </div>
+              <button type="submit" disabled={claiming} className="btn btn-primary w-full sm:w-auto">
+                {claiming ? <span className="loading loading-spinner loading-sm" /> : null}
+                {claiming ? t('claimSaving') : t('claimSubmit')}
+              </button>
+            </form>
+          </div>
+        </section>
       )}
 
       {/* ── Session ─────────────────────────────────────── */}
@@ -323,7 +385,7 @@ export default function WhatsAppPage() {
                       <tr>
                         <th>{t('key')}</th>
                         <th>{t('created')}</th>
-                        <th className="text-right">{t('actions')}</th>
+                        <th className="text-end">{t('actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -331,7 +393,7 @@ export default function WhatsAppPage() {
                         <tr key={k.id}>
                           <td className="font-mono text-xs">{k.keyPrefix}…</td>
                           <td className="text-xs">{when(k.createdAt)}</td>
-                          <td className="text-right">
+                          <td className="text-end">
                             {k.revokedAt ? (
                               <span className="badge badge-ghost badge-sm">{t('revoked')}</span>
                             ) : (
@@ -390,7 +452,7 @@ export default function WhatsAppPage() {
             <p className="text-sm text-base-content/75">
               {t('claudeIntro')}
             </p>
-            <ol className="list-decimal space-y-1 pl-5 text-sm">
+            <ol className="list-decimal space-y-1 ps-5 text-sm">
               <li>{t('claudeStep1')}</li>
               <li>{t('claudeStep2')}</li>
               <li>{t('claudeStep3')}</li>
@@ -412,7 +474,7 @@ export default function WhatsAppPage() {
                             {t('appConnected', { date: when(a.createdAt) })}
                             {a.lastUsedAt ? ` · ${t('appLastUsed', { date: when(a.lastUsedAt) })}` : ''}
                           </td>
-                          <td className="text-right">
+                          <td className="text-end">
                             <button
                               type="button"
                               disabled={busy}

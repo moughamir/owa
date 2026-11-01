@@ -33,6 +33,9 @@ export class WorkflowEngine {
     if (message.isGroup || message.isStatusBroadcast || !message.chatId.endsWith('@c.us')) {
       return { status: 'ignored', reason: 'not_direct_chat' };
     }
+    if (message.type === 'poll') {
+      return { status: 'ignored', reason: 'poll' };
+    }
     if (message.type !== 'text' && message.type !== 'chat') {
       return { status: 'ignored', reason: 'not_text' };
     }

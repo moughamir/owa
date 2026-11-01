@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/navigation';
 import { compileMDX } from 'next-mdx-remote/rsc';
 import { notFound } from 'next/navigation';
@@ -26,15 +27,15 @@ const mdxComponents = {
   ),
   a: (props: ComponentProps<'a'>) => <a className="link-primary" {...props} />,
   ul: (props: ComponentProps<'ul'>) => (
-    <ul className="mt-4 list-disc space-y-2 pl-6 text-base leading-7 text-base-content/80" {...props} />
+    <ul className="mt-4 list-disc space-y-2 ps-6 text-base leading-7 text-base-content/80" {...props} />
   ),
   ol: (props: ComponentProps<'ol'>) => (
-    <ol className="mt-4 list-decimal space-y-2 pl-6 text-base leading-7 text-base-content/80" {...props} />
+    <ol className="mt-4 list-decimal space-y-2 ps-6 text-base leading-7 text-base-content/80" {...props} />
   ),
   li: (props: ComponentProps<'li'>) => <li className="mt-1" {...props} />,
   blockquote: (props: ComponentProps<'blockquote'>) => (
     <blockquote
-      className="mt-4 border-l-4 pl-4 italic text-base-content/75"
+      className="mt-4 border-s-4 ps-4 italic text-base-content/75"
       {...props}
     />
   ),
@@ -89,6 +90,7 @@ export async function generateMetadata({
 
 export default async function BlogPostPage({ params }: { params: Promise<Params> }) {
   const { slug } = await params;
+  const t = await getTranslations('blog');
   const post = getBlogPost(slug);
   if (!post) notFound();
 
@@ -104,7 +106,7 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
   return (
     <article>
       <header>
-        <p className="text-sm font-semibold uppercase tracking-wide text-primary">Blog</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-primary">{t('eyebrow')}</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{post.title}</h1>
         <p className="mt-3 text-sm text-base-content/75">
           {post.author}
@@ -113,11 +115,11 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
             {dateFormatter.format(post.date)}
           </time>
           {' · '}
-          {post.readingMinutes} min read
-          {post.draft ? ' · Draft' : ''}
+          {t('minRead', { minutes: post.readingMinutes })}
+          {post.draft ? ` · ${t('draft')}` : ''}
         </p>
         {post.tags.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-2" aria-label="Tags">
+          <ul className="mt-4 flex flex-wrap gap-2" aria-label={t('tags')}>
             {post.tags.map((tag) => (
               <li
                 key={tag}
@@ -134,11 +136,11 @@ export default async function BlogPostPage({ params }: { params: Promise<Params>
 
       <footer className="mt-12 border-t border-base-300 pt-6">
         <p className="text-sm text-base-content/75">
-          WaFine, sponsored by Ai4x Academy, built by ZawIA.Tech, open-core on OpenWA.
+          {t('credit')}
         </p>
         <p className="mt-2">
           <Link href="/blog" className="link-primary text-sm">
-            ← All posts
+            {t('allPosts')}
           </Link>
         </p>
       </footer>

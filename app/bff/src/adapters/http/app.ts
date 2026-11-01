@@ -45,6 +45,9 @@ import {
 import type { IAdminRepository, IOAuthRepository, ISendBudget } from '../../domain/ports/index.js';
 import type { RuntimeSettingsService } from '../../infrastructure/settings/runtime-settings.js';
 import type { SecretBox } from '../../infrastructure/crypto/secret-box.js';
+import { FlowStore } from '../../infrastructure/kv/memory-flow-store.js';
+import { RedisOAuthFlowStore } from '../../infrastructure/persistence/redis-oauth-flow-store.js';
+import { Redis } from 'ioredis';
 import { env } from '../../config/env.js';
 
 export interface WorkflowDeps {
@@ -172,7 +175,9 @@ export function createApp(deps: AppDeps) {
         webUrl: wa.oauth.webUrl,
       }
     : undefined;
-  const oauthFlows = oauthDeps ? registerOAuthPublic(app, oauthDeps) : undefined;
+  const oauthFlows = oauthDeps
+    ? registerOAuthPublic(app, oauthDeps, env.redisUrl ? new RedisOAuthFlowStore(new Redis(env.redisUrl)) : new FlowStore())
+    : undefined;
 
   // Key- or OAuth-authenticated passthrough to the private engine (not Supabase sessions)
   if (wa) {
@@ -251,6 +256,8 @@ export function createApp(deps: AppDeps) {
       // Same rule as the public form: no waitlist storage, no waitlist routes.
       deps.waitlist,
       adminEmails,
+      identity,
+      webUrl,
     ),
   );
 
@@ -272,10 +279,6 @@ export function createApp(deps: AppDeps) {
   // Workflow toggles are scoped to the caller's tenant (`auth.tenantId`, see middleware).
   if (workflows) registerWorkflowRoutes(app, workflows.store);
 
-  // TODO: Mount oRPC routers here
-  // app.route('/api', messageRouter);
-  // app.route('/api', contactRouter);
-  // app.route('/api', tenantRouter);
 
   // Error handler: HTTPException keeps its status (401/403/…); anything else is a 500
   // whose details stay in the log.

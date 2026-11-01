@@ -1,20 +1,29 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { addAllowlisted, listAllowlist, removeAllowlisted, type AllowlistEntry } from '@/lib/bff';
 
 /** Invite allowlist: the pre-backoffice /admin page, moved into a tab with its behaviour unchanged. */
 export function AllowlistTab({ canManage }: { canManage: boolean }) {
+  const t = useTranslations('admin.allowlist');
+  const tc = useTranslations('admin.common');
   const [entries, setEntries] = useState<AllowlistEntry[]>([]);
   const [phone, setPhone] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
-  const reload = useCallback(() => listAllowlist().then(setEntries), []);
+  const reload = useCallback(() => listAllowlist().then((list) => {
+    setEntries(list);
+    setLoadFailed(false);
+  }), []);
 
   useEffect(() => {
-    reload().catch((err) => setError(err instanceof Error ? err.message : 'Failed to load'));
+    reload().catch(() => setLoadFailed(true));
   }, [reload]);
+
+  const shownError = error ?? (loadFailed ? tc('loadFailed') : null);
 
   async function run(action: () => Promise<unknown>) {
     setBusy(true);
@@ -23,7 +32,7 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
       await action();
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Request failed');
+      setError(err instanceof Error ? err.message : tc('requestFailed'));
     } finally {
       setBusy(false);
     }
@@ -39,19 +48,19 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
 
   function onRemove(entry: AllowlistEntry) {
     const warn = entry.boundEmail
-      ? `Remove ${entry.phoneE164}? ${entry.boundEmail} is bound to it and will lose the link.`
-      : `Remove ${entry.phoneE164} from the allowlist?`;
+      ? t('removeQuestionBound', { phone: entry.phoneE164, email: entry.boundEmail })
+      : t('removeQuestion', { phone: entry.phoneE164 });
     if (window.confirm(warn)) void run(() => removeAllowlisted(entry.phoneE164));
   }
 
   return (
     <>
-      <h2 className="mb-4 text-xl font-bold">Invite allowlist</h2>
+      <h2 className="mb-4 text-xl font-bold">{t('title')}</h2>
 
       {canManage && <form onSubmit={onAdd} className="card mb-4 border border-base-300 bg-base-100">
         <div className="card-body gap-3">
           <label htmlFor="admin-phone" className="text-sm font-medium">
-            Invite a WhatsApp number
+            {t('inviteLabel')}
           </label>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input
@@ -59,30 +68,30 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+212 6XX XX XX XX"
+              placeholder={t('phonePlaceholder')}
               autoComplete="tel"
               className="input w-full sm:min-w-0 sm:flex-1"
               required
             />
             <button type="submit" disabled={busy} className="btn btn-primary w-full sm:w-auto">
-              Add
+              {t('add')}
             </button>
           </div>
           <p className="text-xs text-base-content/75">
-            International format (E.164), e.g. +212 6XX XX XX XX. They can sign up only with this number.
+            {t('formatHint')}
           </p>
         </div>
       </form>}
 
-      {error && (
+      {shownError && (
         <div role="alert" className="alert alert-error mb-4">
-          <span>{error}</span>
+          <span>{shownError}</span>
         </div>
       )}
 
       {entries.length === 0 ? (
         <div className="alert">
-          <span>{canManage ? 'No numbers yet. Add one to invite someone.' : 'No numbers yet.'}</span>
+          <span>{canManage ? t('emptyCanManage') : t('empty')}</span>
         </div>
       ) : (
         <>
@@ -91,10 +100,10 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Number</th>
-                  <th>Status</th>
-                  <th>Added by</th>
-                  <th>Added</th>
+                  <th>{t('colNumber')}</th>
+                  <th>{t('colStatus')}</th>
+                  <th>{t('colAddedBy')}</th>
+                  <th>{t('colAdded')}</th>
                   <th />
                 </tr>
               </thead>
@@ -105,23 +114,23 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
                     <td>
                       {e.boundEmail ? (
                         <div>
-                          <span className="badge badge-success badge-sm">Registered</span>
+                          <span className="badge badge-success badge-sm">{t('registered')}</span>
                           <div className="mt-1 text-xs">{e.boundEmail}</div>
                         </div>
                       ) : (
-                        <span className="badge badge-ghost badge-sm">Invited</span>
+                        <span className="badge badge-ghost badge-sm">{t('invited')}</span>
                       )}
                     </td>
                     <td>{e.addedBy}</td>
                     <td className="text-xs">{new Date(e.addedAt).toLocaleDateString()}</td>
-                    <td className="text-right">
+                    <td className="text-end">
                       {canManage && <button
                         type="button"
                         disabled={busy}
                         onClick={() => onRemove(e)}
                         className="btn btn-ghost btn-sm text-error"
                       >
-                        Remove
+                        {t('remove')}
                       </button>}
                     </td>
                   </tr>
@@ -137,14 +146,14 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0 break-all font-mono">{e.phoneE164}</span>
                   {e.boundEmail ? (
-                    <span className="badge badge-success badge-sm shrink-0">Registered</span>
+                    <span className="badge badge-success badge-sm shrink-0">{t('registered')}</span>
                   ) : (
-                    <span className="badge badge-ghost badge-sm shrink-0">Invited</span>
+                    <span className="badge badge-ghost badge-sm shrink-0">{t('invited')}</span>
                   )}
                 </div>
                 {e.boundEmail && <p className="mt-1 break-all text-xs">{e.boundEmail}</p>}
                 <p className="mt-1 text-xs text-base-content/75">
-                  Added by {e.addedBy} · {new Date(e.addedAt).toLocaleDateString()}
+                  {t('addedBy', { admin: e.addedBy ?? '', date: new Date(e.addedAt).toLocaleDateString() })}
                 </p>
                 {canManage && <button
                   type="button"
@@ -152,7 +161,7 @@ export function AllowlistTab({ canManage }: { canManage: boolean }) {
                   onClick={() => onRemove(e)}
                   className="btn btn-ghost btn-sm mt-1 h-11 text-error"
                 >
-                  Remove
+                  {t('remove')}
                 </button>}
               </li>
             ))}

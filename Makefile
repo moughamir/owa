@@ -1,4 +1,4 @@
-# openwa-oci-infra — operator entry points.
+# wafine — operator entry points.
 # Thin wrappers over scripts/ (the scripts stay authoritative).
 #
 #   make                # this help

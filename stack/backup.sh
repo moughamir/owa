@@ -9,8 +9,9 @@
 # Why not OpenWA/scripts/backup.sh: its pg_dump has no --schema filter, so with the least-privilege
 # `openwa` role it fails on Supabase-owned schemas (auth, storage, ...).
 #
-# Session auth state = account takeover material. Set BACKUP_AGE_RECIPIENT (an `age` public key) in
-# stack/.env to encrypt archives before upload.
+# Encryption is MANDATORY (WF-031): session auth state = account takeover material, so the script
+# refuses to run without BACKUP_AGE_RECIPIENT (an `age` public key) in stack/.env — no plaintext
+# fallback. Keypair setup, rotation and the restore test: docs/14-encrypted-backups.md.
 #
 # Cron (installed by scripts/deploy.sh):  17 3 * * *  ubuntu  /opt/wa/stack/backup.sh
 set -euo pipefail
@@ -20,6 +21,24 @@ TS=$(date -u +%Y%m%dT%H%M%SZ)
 OUT="$ROOT/backups"
 mkdir -p "$OUT"
 log() { echo "[$(date -Is)] $*"; }
+
+# Fail FAST, before anything is archived: without an age recipient the archives would be
+# uploaded in plaintext (or at best pile up unencrypted on the VM). The R2 bucket is outside
+# our trust boundary, so there is no safe unencrypted mode.
+if [ -z "${BACKUP_AGE_RECIPIENT:-}" ]; then
+  log "ERROR: BACKUP_AGE_RECIPIENT is not set in stack/.env — refusing to create an UNENCRYPTED backup."
+  log "       The archive contains WhatsApp session auth state: account-takeover material that must be"
+  log "       encrypted before it leaves the VM. Generate a keypair (identity goes to pass:"
+  log "       'backups/age/openwa-vm', public key to stack/.env), then set BACKUP_AGE_RECIPIENT=age1..."
+  log "       and re-run. Full steps: docs/14-encrypted-backups.md."
+  exit 1
+fi
+case "$BACKUP_AGE_RECIPIENT" in
+  age1*) ;;                 # age X25519 recipient
+  "ssh-ed25519 "*) ;;       # an ssh public key age can consume
+  "ssh-rsa "*) ;;           # 2048-bit RSA ssh key; the only RSA ssh recipient age supports
+  *) log "WARNING: '$BACKUP_AGE_RECIPIENT' does not look like an age recipient (age1...) or an ssh public key; age will reject it at encrypt time." ;;
+esac
 
 # Object storage = any S3-compatible store. S3_PROVIDER=Other (default) is the plain-S3 shape OCI
 # Object Storage and MinIO speak; Cloudflare R2 sets its own provider quirks. Path style
@@ -64,12 +83,12 @@ docker exec -u openwa -e PGPASSWORD -e PGSSLMODE=verify-full -e PGSSLROOTCERT=/r
   -n "$POSTGRES_SCHEMA" --no-owner --no-privileges -Fc > "$OUT/openwa-db-$TS.dump"
 unset PGPASSWORD
 
-if [ -n "${BACKUP_AGE_RECIPIENT:-}" ]; then
-  log "encrypting with age"
-  for f in "$OUT/openwa-data-$TS.tar.gz" "$OUT/openwa-db-$TS.dump"; do
-    age -r "$BACKUP_AGE_RECIPIENT" -o "$f.age" "$f" && rm -f "$f"
-  done
-fi
+# Mandatory (guarded above): encrypt both archives, then delete the plaintext.
+# If `age` fails, set -e aborts before upload — the plaintext never leaves the VM's $OUT.
+log "encrypting with age"
+for f in "$OUT/openwa-data-$TS.tar.gz" "$OUT/openwa-db-$TS.dump"; do
+  age -r "$BACKUP_AGE_RECIPIENT" -o "$f.age" "$f" && rm -f "$f"
+done
 
 if [ "$HAVE_STORE" = 1 ]; then
   log "uploading to ${BACKUP_BUCKET:-openwa-backups}/$(hostname)/"

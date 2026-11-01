@@ -39,6 +39,15 @@ class FakeIdentity implements IIdentityProvider {
     return this.users.get(token.replace(/^tok:/, '')) ?? null;
   }
   async deleteUser() {}
+  async sendMagicLink(): Promise<never> {
+    throw new Error('unused');
+  }
+  async sendInvite(): Promise<never> {
+    throw new Error('unused');
+  }
+  async verifyTokenHash(): Promise<null> {
+    return null;
+  }
 }
 
 class FakeGateway implements IWhatsAppGateway {

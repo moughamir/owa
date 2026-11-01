@@ -47,7 +47,7 @@ Visuals: `references/visuals.md`, and `scripts/render_card.mjs` renders on-brand
 
 ## When requirements conflict
 
-The owner's decisions win over older plans (`owner-defaults v2` beats the early rebrand plan): hero "Turn your WhatsApp number into an AI teammate.", no Pricing link, primary CTA "Join the waitlist". Where this skill and the repo's `docs/design-system/README.md` differ on look or voice, the design system wins. Brand identity is the WaFine design system: `assets/design-system/` in this skill, a copy of `docs/design-system/`. `scripts/check_brand.py` fails when the copy drifts. Two known stale sources: the vault's `Resources/Brand.md` (old blue palette, `WAFINE` caps, `W` monogram) and `docs/design-system` v0 from PR #71. Use the current v2 values in `assets/design-system/tokens.json`.
+The owner's decisions win over older plans (`owner-defaults v2` beats the early rebrand plan): hero "WaFine — WhatsApp gateway for teams.", no Pricing link, primary CTA "Join the waitlist". Where this skill and the repo's `docs/design-system/README.md` differ on look or voice, the design system wins. Brand identity is the WaFine design system: `assets/design-system/` in this skill, a copy of `docs/design-system/`. `scripts/check_brand.py` fails when the copy drifts. Two known stale sources: the vault's `Resources/Brand.md` (old blue palette, `WAFINE` caps, `W` monogram) and `docs/design-system` v0 from PR #71. Use the current v2 values in `assets/design-system/tokens.json`.
 
 ## Reference map
 

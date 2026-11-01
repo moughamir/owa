@@ -29,6 +29,7 @@ import type {
 import { normalizeE164 } from '../../../domain/value-objects/phone.js';
 import type { RuntimeSettingsService } from '../../../infrastructure/settings/runtime-settings.js';
 import { USER_ROLES, type UserRole } from '../../../domain/user-roles.js';
+import type { IIdentityProvider } from '../../../domain/ports/index.js';
 import { requirePermission as can } from '../../../infrastructure/auth/admin-authorization.js';
 import { effectiveLimits } from '../../../infrastructure/settings/runtime-settings.js';
 import { zJson, zQuery } from '../validation.js';
@@ -98,9 +99,29 @@ export function adminRoutes(
   backoffice?: AdminBackofficeDeps,
   waitlist?: IWaitlistRepository,
   configuredAdminEmails: readonly string[] = backoffice?.adminEmails ?? [],
+  /** The identity provider used to e-mail waitlist invites; `webUrl` is the link origin. */
+  identity?: IIdentityProvider,
+  webUrl?: string,
 ): Hono {
   const r = new Hono();
   const admins = new Set(configuredAdminEmails.map((e) => e.trim().toLowerCase()).filter(Boolean));
+
+  /**
+   * The invite e-mail is best-effort: the allowlist membership is what sign-up checks (the source
+   * of truth), so a failed or rate-limited send never fails the invite — the admin can still
+   * re-send manually from Brevo until the SMTP cutover (owner task WF-014).
+   */
+  const sendInviteEmail = async (entry: { email: string }, phone: string): Promise<boolean> => {
+    // Without a provider wired there is no e-mail at all; createApp always supplies one.
+    if (!identity || !webUrl) return false;
+    try {
+      const inviteUrl = `${webUrl.replace(/\/$/, '')}/auth/magic`;
+      return (await identity.sendInvite(entry.email, inviteUrl, { phone_e164: phone })) === 'sent';
+    } catch (err) {
+      console.error('invite e-mail send failed for', entry.email, err);
+      return false;
+    }
+  };
 
   r.get('/allowlist', can('allowlist:read'), async (c) => c.json({ entries: await accounts.listAllowlist() }));
 
@@ -158,7 +179,11 @@ export function adminRoutes(
           message: 'This entry has no WhatsApp number; send one in the body as phone, e.g. +212 6XX XX XX XX',
         });
       }
-      if (entry.status === 'invited') return c.json({ id: entry.id, phone, created: false, status: 'invited' }, 200);
+      if (entry.status === 'invited') {
+        // Already invited: a second click (e.g. lost the first e-mail) still re-sends the e-mail.
+        const emailSent = await sendInviteEmail(entry, phone);
+        return c.json({ id: entry.id, phone, created: false, status: 'invited', emailSent }, 200);
+      }
       if (entry.status !== 'pending') throw new HTTPException(409, { message: 'Only pending leads can be approved.' });
 
       // Order matters and both steps are idempotent: the allowlist is what sign-up checks, so it is
@@ -169,7 +194,8 @@ export function adminRoutes(
       if (!(await waitlist.markInvited(entry.id, c.get('auth').userId))) {
         throw new HTTPException(409, { message: 'This lead changed while it was being approved.' });
       }
-      return c.json({ id: entry.id, phone, created, status: 'invited' }, created ? 201 : 200);
+      const emailSent = await sendInviteEmail(entry, phone);
+      return c.json({ id: entry.id, phone, created, status: 'invited', emailSent }, created ? 201 : 200);
     });
 
     r.post('/waitlist/:id/reject', can('waitlist:decide'), async (c) => {
@@ -213,7 +239,8 @@ export function adminRoutes(
 
       // One transaction decides the whole batch (WF-018): an entry that changed or is missing
       // fails the call before any other lead is touched, and invite also allowlists in the
-      // same unit of work.
+      // same unit of work. Deliberately no invite e-mails here — 50 at once would trip the
+      // provider's rate limit; admins send them (or one) individually.
       const bulk = await waitlist.bulkDecide({
         ids: found.map((entry) => entry.id),
         adminId: c.get('auth').userId,

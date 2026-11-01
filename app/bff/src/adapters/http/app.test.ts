@@ -15,6 +15,8 @@ class FakeIdentity implements IIdentityProvider {
   users = new Map<string, IdentityUser & { password: string }>();
   deleted: string[] = [];
   signUpCalls = 0;
+  inviteCalls: Array<{ email: string; redirectTo: string; metadata: Record<string, string> }> = [];
+  inviteResult: 'sent' | 'exists' | 'rate_limited' = 'sent';
   private seq = 0;
 
   async signUp(email: string, password: string): Promise<SignUpResult> {
@@ -49,6 +51,18 @@ class FakeIdentity implements IIdentityProvider {
     this.users.delete(userId);
   }
 
+  async sendMagicLink(email: string, redirectTo: string) {
+    this.inviteCalls.push({ email, redirectTo, metadata: {} });
+    return 'sent' as const;
+  }
+  async sendInvite(email: string, redirectTo: string, metadata: Record<string, string>) {
+    this.inviteCalls.push({ email, redirectTo, metadata });
+    return this.inviteResult;
+  }
+  async verifyTokenHash(): Promise<null> {
+    return null;
+  }
+
   /** Test helper: create a confirmed user and return its bearer header. */
   confirmed(email: string): { Authorization: string } {
     const userId = `11111111-0000-4000-8000-${String(++this.seq).padStart(12, '0')}`;
@@ -81,6 +95,7 @@ function build(
     authRateLimit: authLimit,
     waitlistRateLimit: waitlistLimit,
     waitlist,
+    webUrl: 'https://app.example.com/',
   });
 }
 
@@ -472,7 +487,13 @@ describe('admin waitlist', () => {
 
     const res = await invite(id, {}, adminHeaders);
     expect(res.status).toBe(201);
-    expect(await res.json()).toEqual({ id, phone: NUMBER, created: true, status: 'invited' });
+    expect(await res.json()).toEqual({ id, phone: NUMBER, created: true, status: 'invited', emailSent: true });
+    // The invite e-mail went to the magic-link page with the lead's number in the metadata.
+    expect(identity.inviteCalls[0]).toEqual({
+      email: 'lead@example.com',
+      redirectTo: 'https://app.example.com/auth/magic',
+      metadata: { phone_e164: NUMBER },
+    });
     expect(await accounts.isAllowlisted(NUMBER)).toBe(true);
     expect((await list(adminHeaders)).entries[0]).toMatchObject({ id, status: 'invited' });
   });
@@ -485,12 +506,39 @@ describe('admin waitlist', () => {
     expect((await invite(id, {}, adminHeaders)).status).toBe(201);
     const again = await invite(id, {}, adminHeaders);
     expect(again.status).toBe(200);
-    expect(await again.json()).toEqual({ id, phone: NUMBER, created: false, status: 'invited' });
+    expect(await again.json()).toEqual({ id, phone: NUMBER, created: false, status: 'invited', emailSent: true });
 
     const allowlist = await accounts.listAllowlist();
     expect(allowlist).toHaveLength(1);
     expect(allowlist[0]).toMatchObject({ phoneE164: NUMBER, addedBy: ADMIN });
     expect((await list(adminHeaders, '?status=invited')).total).toBe(1);
+  });
+
+  it('reports a failed invite e-mail as emailSent: false without failing the invite itself', async () => {
+    const adminHeaders = identity.confirmed(ADMIN);
+    await seed('bounce@example.com');
+    const { id } = (await list(adminHeaders)).entries[0]!;
+
+    // Rate-limited send: the allowlist decision stands, only the e-mail is reported as missing.
+    identity.inviteResult = 'rate_limited';
+    const rate = await invite(id, {}, adminHeaders);
+    expect(rate.status).toBe(201);
+    expect(await rate.json()).toEqual({ id, phone: NUMBER, created: true, status: 'invited', emailSent: false });
+
+    // A throwing provider never bubbles up either.
+    identity.inviteResult = 'sent';
+    await seed('throwing@example.com');
+    identity.sendInvite = () => Promise.reject(new Error('smtp down'));
+    const thrown = await invite((await list(adminHeaders)).entries.find((e) => e.email === 'throwing@example.com')!.id, {}, adminHeaders);
+    // Same number as the first invite, so the allowlist row already exists (created: false).
+    expect(thrown.status).toBe(200);
+    expect(await thrown.json()).toEqual({
+      id: expect.any(String),
+      phone: NUMBER,
+      created: false,
+      status: 'invited',
+      emailSent: false,
+    });
   });
 
   it('takes the number in the body when the lead did not give one', async () => {

@@ -23,6 +23,7 @@ export const AUTH_ERROR_CODES = [
   'same_password',
   'invalid_email',
   'reset_link_invalid',
+  'magic_link_invalid',
   'bootstrap_owner',
   'network_error',
 ] as const;

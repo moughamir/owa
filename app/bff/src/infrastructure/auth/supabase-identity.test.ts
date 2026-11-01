@@ -80,7 +80,66 @@ describe('SupabaseIdentityProvider', () => {
     expect(await provider(429, {}).p.sendPasswordReset('a@b.c', 'https://x')).toBe('rate_limited');
   });
 
+  it('sends a magic link to /otp without creating the account, with the anon key', async () => {
+    const { p, calls } = provider(200, {});
+    expect(await p.sendMagicLink('A@B.c', 'https://app.example.com/auth/magic?next=x')).toBe('sent');
+    expect(calls[0]?.url).toBe(
+      'https://x.supabase.co/auth/v1/otp?redirect_to=' + encodeURIComponent('https://app.example.com/auth/magic?next=x'),
+    );
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ email: 'A@B.c', create_user: false });
+    expect((calls[0]?.init.headers as Record<string, string>)['apikey']).toBe('anon');
+  });
+
+  it('maps only rate limits on the magic link and never reveals whether the address exists', async () => {
+    expect(await provider(429, {}).p.sendMagicLink('a@b.c', 'https://x')).toBe('rate_limited');
+    expect(
+      await provider(422, { error_code: 'over_email_send_rate_limit' }).p.sendMagicLink('a@b.c', 'https://x'),
+    ).toBe('rate_limited');
+    // Unknown address (GoTrue answers 400) still reads as sent.
+    expect(await provider(400, { error_code: 'user_not_found' }).p.sendMagicLink('a@b.c', 'https://x')).toBe('sent');
+  });
+
+  it('sends admin invites over the service-role key with the metadata', async () => {
+    const { p, calls } = provider(200, { id: 'u1' });
+    expect(await p.sendInvite('lead@example.com', 'https://app.example.com/auth/magic', { phone_e164: '+2126' })).toBe('sent');
+    expect(calls[0]?.url).toBe('https://x.supabase.co/auth/v1/invite?redirect_to=https%3A%2F%2Fapp.example.com%2Fauth%2Fmagic');
+    expect(JSON.parse(String(calls[0]?.init.body))).toEqual({ email: 'lead@example.com', data: { phone_e164: '+2126' } });
+    expect((calls[0]?.init.headers as Record<string, string>)['apikey']).toBe('service');
+  });
+
+  it('maps invite outcomes: rate limit, already subscribed, and unexpected failures', async () => {
+    expect(await provider(429, {}).p.sendInvite('a@b.c', 'https://x', {})).toBe('rate_limited');
+    expect(
+      await provider(422, { error_code: 'user_already_exists' }).p.sendInvite('a@b.c', 'https://x', {}),
+    ).toBe('exists');
+    expect(await provider(422, { error_code: 'email_exists' }).p.sendInvite('a@b.c', 'https://x', {})).toBe('exists');
+    await expect(provider(500, { error_code: 'smtp_error' }).p.sendInvite('a@b.c', 'https://x', {})).rejects.toThrow(
+      'Supabase invite failed: 500 smtp_error',
+    );
+  });
+
+  it('exchanges a link token hash for a session, or returns null on an expired link', async () => {
+    const { p, calls } = provider(200, {
+      access_token: 'at',
+      refresh_token: 'rt',
+      expires_in: 3600,
+      user: { id: 'u1', email: 'A@b.c', email_confirmed_at: '2026-01-01' },
+    });
+    const result = await p.verifyTokenHash('hash-of-the-link', 'magiclink');
+    expect(result).toEqual({
+      tokens: { accessToken: 'at', refreshToken: 'rt', expiresIn: 3600 },
+      user: { userId: 'u1', email: 'a@b.c', emailConfirmed: true },
+    });
+    expect(calls[0]?.url).toBe('https://x.supabase.co/auth/v1/verify?token_hash=hash-of-the-link&type=magiclink');
+    expect(calls[0]?.init.method).toBe('POST');
+
+    expect(await provider(400, {}).p.verifyTokenHash('gone', 'magiclink')).toBeNull();
+    expect(await provider(401, {}).p.verifyTokenHash('gone', 'invite')).toBeNull();
+    await expect(provider(500, {}).p.verifyTokenHash('gone', 'signup')).rejects.toThrow('Supabase verify failed: 500');
+  });
+
   it('signs out globally with the user token', async () => {
+
     const { p, calls } = provider(204, {});
     await p.signOutAll('user-token');
     expect(calls[0]?.url).toBe('https://x.supabase.co/auth/v1/logout?scope=global');
