@@ -12,6 +12,7 @@ import type {
   CreatedApiKey,
   SendTextInput,
   SendMediaInput,
+  SendPollInput,
   SendResult,
 } from '../../domain/ports/index.js';
 import { env } from '../../config/env.js';
@@ -215,6 +216,15 @@ export class OpenWaHttpClient implements IWhatsAppGateway {
       'POST',
       `/api/sessions/${encodeURIComponent(input.sessionId)}/messages/${MEDIA_PATHS[input.kind]}`,
       payload,
+    );
+    return { messageId: dto.messageId, timestamp: dto.timestamp };
+  }
+
+  async sendPoll(input: SendPollInput): Promise<SendResult> {
+    const dto = await this.request<SendResultDto>(
+      'POST',
+      `/api/sessions/${encodeURIComponent(input.sessionId)}/messages/send-poll`,
+      { chatId: input.chatId, name: input.name, options: input.options, allowMultipleAnswers: input.allowMultipleAnswers },
     );
     return { messageId: dto.messageId, timestamp: dto.timestamp };
   }

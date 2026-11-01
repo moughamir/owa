@@ -86,6 +86,14 @@ export interface OpenWaWebhookEnvelope {
 /**
  * Outbound messaging gateway. Port of the OpenWA HTTP API.
  */
+export interface SendPollInput {
+  sessionId: string;
+  chatId: string;
+  name: string;
+  options: string[];
+  allowMultipleAnswers?: boolean;
+}
+
 export interface IWhatsAppGateway {
   listSessions(): Promise<OpenWaSession[]>;
   /** Read chat summaries from a single session. The caller must resolve the session through tenancy. */
@@ -107,6 +115,7 @@ export interface IWhatsAppGateway {
   revokeApiKey(keyId: string): Promise<void>;
   sendText(input: SendTextInput): Promise<SendResult>;
   sendMedia(input: SendMediaInput): Promise<SendResult>;
+  sendPoll(input: SendPollInput): Promise<SendResult>;
   /**
    * True when the gateway is live AND accepts our API key. `/api/health` is public, so a
    * liveness-only check would report ready while real calls 401 on a stale key.

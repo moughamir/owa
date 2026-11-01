@@ -60,6 +60,9 @@ const messageSchema = z.object({
   fromMe: z.boolean().default(false),
   isGroup: z.boolean().default(false),
   isStatusBroadcast: z.boolean().optional(),
+  // Poll vote fields (when type === 'poll' and this is a vote, not creation)
+  pollMessageId: z.string().optional(),
+  selectedOptions: z.array(z.string()).optional(),
 });
 
 export interface WebhookRouteDeps {
@@ -90,6 +93,20 @@ export function registerWebhookRoutes(app: Hono, deps: WebhookRouteDeps): void {
 
     const message = messageSchema.safeParse(envelope.data);
     if (!message.success) return c.json({ error: 'Malformed message' }, 400);
+
+    // Poll vote: type === 'poll' with pollMessageId present means a vote, not creation.
+    // Track the vote but don't run through workflow engine.
+    const isPollVote = message.data.type === 'poll' && message.data.pollMessageId;
+    if (isPollVote) {
+      // TODO: Persist poll vote to database for analytics/dashboard
+      console.log('[webhook] Poll vote received', {
+        sessionId: envelope.sessionId,
+        chatId: message.data.chatId,
+        pollMessageId: message.data.pollMessageId,
+        selectedOptions: message.data.selectedOptions,
+      });
+      return c.json({ ok: true, tracked: 'poll_vote' });
+    }
 
     const replayKey = c.req.header('X-OpenWA-Idempotency-Key') ?? envelope.idempotencyKey;
     if (replayKey && !(await deps.replayGuard.claim(replayKey, REPLAY_WINDOW_MS))) {

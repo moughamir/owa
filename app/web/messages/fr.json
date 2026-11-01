@@ -18,7 +18,21 @@
     "unread": "{count} non lus",
     "noPreview": "Aucun message pour le moment",
     "mediaError": "Impossible d'ouvrir la pièce jointe. Réessayez.",
-    "pollLabel": "📊 Poll"
+    "pollLabel": "📊 Poll",
+    "pollCreate": "Créer un sondage",
+    "pollCreateButton": "Créer un sondage",
+    "pollQuestion": "Question",
+    "pollQuestionPlaceholder": "Quelle question voulez-vous poser ?",
+    "pollOptions": "Options (2-12)",
+    "pollOptionPlaceholder": "Option",
+    "pollAddOption": "Ajouter une option",
+    "pollAllowMultiple": "Autoriser plusieurs réponses",
+    "pollSend": "Envoyer le sondage",
+    "pollErrorQuestion": "Veuillez entrer une question",
+    "pollErrorOptions": "Veuillez entrer au moins 2 options",
+    "pollErrorMaxOptions": "Maximum 12 options autorisées",
+    "cancel": "Annuler",
+    "sending": "Envoi en cours..."
   },
   "og": {
     "home": {

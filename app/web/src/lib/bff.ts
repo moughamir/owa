@@ -354,6 +354,13 @@ export const revokeWaKey = (id: string) => authed<void>(`/api/wa/keys/${encodeUR
 export const getWaConnectInfo = () =>
   authed<{ restBase: string; mcpUrl: string; authHeader: string }>('/api/wa/connect-info');
 
+/** Send a native WhatsApp poll via the gateway proxy using the user's API key. */
+export const sendPoll = (chatId: string, name: string, options: string[], allowMultipleAnswers = false) =>
+  authed<{ ok: true; messageId: string }>('/api/wa/send-poll', {
+    method: 'POST',
+    body: JSON.stringify({ chatId, name, options, allowMultipleAnswers }),
+  });
+
 // ── OAuth connectors (Claude) ─────────────────────────────────
 
 export interface OAuthRequestInfo {

@@ -99,6 +99,9 @@ class FakeGateway implements IWhatsAppGateway {
   async sendMedia(): Promise<SendResult> {
     throw new Error('unused');
   }
+  async sendPoll(): Promise<SendResult> {
+    return { messageId: 'poll-test-id', timestamp: new Date().toISOString() };
+  }
   async health() {
     return true;
   }

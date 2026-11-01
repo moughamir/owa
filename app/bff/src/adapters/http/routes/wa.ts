@@ -252,5 +252,36 @@ export function waRoutes({ gateway, tenancy, accounts, publicApiUrl, oauth, medi
     return c.body(null, 204);
   });
 
+  // ── Send poll (user-scoped, uses the caller's API key) ───────
+  r.post('/send-poll', async (c) => {
+    const { userId } = c.get('auth');
+    const rec = await ownSession(userId);
+    const keys = await tenancy.listKeys(userId);
+    const activeKey = keys.find((k) => !k.revokedAt);
+    if (!activeKey) throw new HTTPException(409, { message: 'Create an API key first.' });
+
+    const body = await c.req.json();
+    const { chatId, name, options, allowMultipleAnswers } = body as {
+      chatId: string;
+      name: string;
+      options: string[];
+      allowMultipleAnswers?: boolean;
+    };
+    if (!chatId || !name || !Array.isArray(options) || options.length < 2 || options.length > 12) {
+      throw new HTTPException(400, { message: 'Invalid poll: chatId, name, and 2-12 options required.' });
+    }
+
+    const res = await gateway
+      .sendPoll({
+        sessionId: rec.openwaSessionId,
+        chatId,
+        name,
+        options,
+        allowMultipleAnswers,
+      })
+      .catch(gatewayError);
+    return c.json({ ok: true, messageId: res.messageId });
+  });
+
   return r;
 }

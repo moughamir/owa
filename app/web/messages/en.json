@@ -18,7 +18,21 @@
     "unread": "{count} unread",
     "noPreview": "No messages yet",
     "mediaError": "Could not open the attachment. Try again.",
-    "pollLabel": "📊 Poll"
+    "pollLabel": "📊 Poll",
+    "pollCreate": "Create a Poll",
+    "pollCreateButton": "Create Poll",
+    "pollQuestion": "Question",
+    "pollQuestionPlaceholder": "What do you want to ask?",
+    "pollOptions": "Options (2-12)",
+    "pollOptionPlaceholder": "Option",
+    "pollAddOption": "Add Option",
+    "pollAllowMultiple": "Allow multiple answers",
+    "pollSend": "Send Poll",
+    "pollErrorQuestion": "Please enter a question",
+    "pollErrorOptions": "Please enter at least 2 options",
+    "pollErrorMaxOptions": "Maximum 12 options allowed",
+    "cancel": "Cancel",
+    "sending": "Sending..."
   },
   "og": {
     "home": {

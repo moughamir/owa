@@ -70,6 +70,7 @@ const REST_SEND_ACTIONS = new Set([
   'send-contact',
   'send-sticker',
   'send-poll',
+  'vote-poll',
   'reply',
   'forward',
 ]);

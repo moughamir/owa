@@ -18,7 +18,21 @@
     "unread": "{count} غير مقروءة",
     "noPreview": "لا توجد رسائل بعد",
     "mediaError": "تعذّر فتح المرفق. حاول مرة أخرى.",
-    "pollLabel": "📊 Poll"
+    "pollLabel": "📊 Poll",
+    "pollCreate": "إنشاء استطلاع",
+    "pollCreateButton": "إنشاء استطلاع",
+    "pollQuestion": "السؤال",
+    "pollQuestionPlaceholder": "ما السؤال الذي تريد طرحه؟",
+    "pollOptions": "الخيارات (٢-١٢)",
+    "pollOptionPlaceholder": "خيار",
+    "pollAddOption": "إضافة خيار",
+    "pollAllowMultiple": "السماح بإجابات متعددة",
+    "pollSend": "إرسال الاستطلاع",
+    "pollErrorQuestion": "يرجى إدخال سؤال",
+    "pollErrorOptions": "يرجى إدخال خيارين على الأقل",
+    "pollErrorMaxOptions": "الحد الأقصى ١٢ خيارًا",
+    "cancel": "إلغاء",
+    "sending": "جاري الإرسال..."
   },
   "og": {
     "home": {
