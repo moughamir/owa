@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.1.7-alpha] - 2026-11-01
+
+Hardening & i18n wave, cut from `develop` at `4e75709` (14 PRs merged after v0.1.6-alpha; all CI-green).
+
+### Security
+
+- **WF-005** (#101): Hardened `safe-next` against tab/newline/backslash bypass variants.
+- **WF-031** (#100): Refuse unencrypted nightly backups without `BACKUP_AGE_RECIPIENT`.
+
+### Fixed
+
+- **WF-026** (#104): Redis-backed `FlowStore` + `IIdempotencyStore` with in-memory fallback; OAuth flow state and webhook idempotency no longer in-memory.
+- **WF-028** (#106, #110): Replaced "Turn your WhatsApp number into an AI teammate" with "WaFine — WhatsApp gateway for teams" across OG image, metadata, discoverability, blog, video, and marketing assets (EN/FR).
+- **WF-024** (#109): OAuth consent screen fully internationalized — no hardcoded English remains.
+- **WF-023** (#92): Logical RTL Tailwind classes (`ms-`/`me-` instead of `ml-`/`mr-`) across 9 files; admin/consent copy extracted to i18n.
+- **WF-047** (#107): Removed unused BIP39 recovery mnemonic placeholder (unreachable in production).
+- **WF-045** (#105): Removed unused oRPC layer (`@orpc/client`, `@orpc/server`) and dead TODO in app.ts.
+- **WF-029** (#108): Reconciled "WaaSel" → "WaFine" in agentic BFF plan doc.
+
+### Added
+
+- **WF-060 (partial)** (#111): Webhook filter for native WhatsApp poll messages (`type: 'poll'`) + poll indicator (📊 Poll) in message list. Poll vote tracking and creation UI remain for follow-up.
+- **WF-021 (partial)** (#112): Workflow engine test coverage (8 tests covering all ignore reasons: `from_me`, `not_direct_chat`, `poll`, `not_text`, `unknown_session`, `not_allowlisted`, `no_match`, `rule_disabled`, `cooldown`). Signup allowlist, gateway proxy, media presign, MCP client already covered.
+- **WF-032** (#102): Uptime alert runbook + `METRICS_TOKEN` observability wiring.
+
+### Changed
+
+- **WF-006** (#90): Security headers for docs host (CSP, HSTS, X-Frame-Options, Referrer-Policy).
+- **WF-044** (#96): Product integrations skeleton doc.
+- **WF-006** (#91): Stub pages for contacts, agent-builder, MCP marketplace, billing, CRM.
+
+### Release
+
+- 315 BFF tests + 243 web tests pass, TypeScript clean.
+- Exporter deny-list verified clean (CHANGELOG v0.1.4 entry still valid).
+
 ## [0.1.4-alpha] - 2026-10-24
 
 ### Added
