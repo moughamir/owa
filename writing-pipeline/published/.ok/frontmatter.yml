@@ -1,0 +1,5 @@
+title: Published
+description: Shipped work; carries `published_at`, `canonical_url`, `channel`. Treat as immutable — to revise, copy to a new draft.
+tags:
+  - published
+  - live

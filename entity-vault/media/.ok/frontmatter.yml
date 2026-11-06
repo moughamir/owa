@@ -1,0 +1,6 @@
+title: Media
+description: "Bulk transcripts, voice notes, articles, large attachments. Frontmatter `type: transcript` (template provided). Often `.okignore`-d so the OK index stays light. Keep raw media/source material here; analysis belongs in dossiers, not here. If you also run Garry Tan's `gbrain`, import/sync can index these Markdown transcripts alongside the entity dossiers."
+tags:
+  - media
+  - transcript
+  - bulk

@@ -1,0 +1,6 @@
+title: Companies
+description: "Company dossiers. Same body convention as `people/`: compiled-truth above `--- timeline ---`, append-only parseable timeline below. Frontmatter `type: company`. Prefer path-qualified links to `people/`, `meetings/`, and `concepts/`. Agent: when a person dossier references a company not yet captured, stub a file here; surface company-to-person edges when both exist."
+tags:
+  - company
+  - entity
+  - dossier

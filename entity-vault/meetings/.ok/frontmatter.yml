@@ -1,0 +1,5 @@
+title: Meetings
+description: "Meeting notes. Filename `YYYY-MM-DD-<slug>.md`. Frontmatter carries `title`, `date`, `attendees:` (prefer person slugs/names that resolve to `people/` dossiers), and `type: meeting`. A meeting ingested from a recorder also carries `source` and `source_meeting_id`; its doc path `meetings/<source>-<source_meeting_id>` derives from that pair, so re-syncing the same meeting updates it in place instead of creating a duplicate. Body is raw notes with path-qualified links to the people, companies, and concepts mentioned. Agent: after a meeting note lands, extract entity mentions and append dated timeline bullets to each referenced dossier. Do NOT rewrite the meeting note; it is the verbatim record."
+tags:
+  - meeting
+  - note

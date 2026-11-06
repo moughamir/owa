@@ -1,0 +1,6 @@
+title: Characters
+description: One file per character (PC + NPC); frontmatter carries `type`, status, faction, first appearance.
+tags:
+  - character
+  - fiction
+  - entity

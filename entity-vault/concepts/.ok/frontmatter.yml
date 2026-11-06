@@ -1,0 +1,6 @@
+title: Concepts
+description: "Evergreen idea pages: abstract patterns, frameworks, recurring concepts that surface across people / companies / meetings. Compiled-truth above `--- timeline ---`, append-only parseable timeline below. Frontmatter `type: concept`. Agent: when a meeting note or person dossier references a concept (e.g. \"agent-runtime observability\") not yet captured, stub a file here; thread path-qualified links so the concept becomes a hub for everywhere it appears."
+tags:
+  - concept
+  - idea
+  - evergreen

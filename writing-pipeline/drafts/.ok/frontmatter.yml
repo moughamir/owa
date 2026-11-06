@@ -1,0 +1,5 @@
+title: Drafts
+description: Active prose. Frontmatter tracks `status`, word count, and parent idea. CRDT history covers every revision, so no named-revision folders.
+tags:
+  - draft
+  - prose
