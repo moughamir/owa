@@ -1,7 +1,5 @@
----
-okf_version: "0.2"
----
+# Index
 
-# Knowledge base
+## Subdirectories
 
-- [Getting started](./concepts/getting-started.md) — purpose and conventions.
+* [concepts](./concepts/index.md)

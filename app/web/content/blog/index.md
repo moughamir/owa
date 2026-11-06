@@ -1,0 +1,20 @@
+# Index
+
+## Other
+
+* [Design and Philosophy — Brand\, Pacing as Respect\, Privacy by Design](./design-philosophy.mdx) - The WaFine design system \(pine\/cream\/clay\, Fredoka\/Inter\/Noto Arabic\, three\-step elevation\)\, pacing as respect for the number\, privacy by design — no surveillance console\.
+* [How WaFine works with Claude and MCP](./how-wafine-works-with-claude-and-mcp.mdx) - WaFine exposes your WhatsApp session as an MCP server — Claude signs in with OAuth and never sees your API key\. Walk through connecting it\, and what stays under your control\.
+* [Implementation and Development — Stack\, Agents Workflow\, Skills Folder](./implementation-development.mdx) - The tech stack \(Bun\, Hono\, Drizzle\, Next\.js\, Tailwind\, Valkey\)\, the agentic workflow \(captain\, workers\, review gate\)\, and the skills\/ folder that encodes repeatable procedures\.
+* [Introducing WaFine](./introducing-wafine.mdx) - WaFine — WhatsApp gateway for teams — paced auto\-reply workflows\, one REST API\, one MCP endpoint\. Invite\-only\, built in Morocco\, launching 20 October 2026\.
+* [Iterations — What We Built and Threw Away](./iterations-what-we-built-and-threw-away.mdx) - From the task tracker\, CHANGELOG\, git log\, and vault Decisions\: the real history of dead ends\, pivots\, and the few things that stuck\.
+* [Learning Resources and Research — A2A\, ANP\, MCP\, WhatsApp Automation Risk](./learning-resources-research.mdx) - Curated reading on Agent\-to\-Agent\, Agent Network Protocol\, Model Context Protocol\, and WhatsApp automation risk — with real links only\.
+* [Privacy by design\, open by default](./privacy-by-design-open-core.mdx) - Where your WhatsApp data lives\, what WaFine stores \(and does not\)\, and why the core is open source — the privacy posture behind the product\, stated plainly\.
+* [Questions and Exchanges — Open Questions to Readers\, How to Reply](./questions-exchanges.mdx) - Open questions for the community\, the waitlist reply path\, no comment system yet\. We read every reply\.
+* [Release v0\.1\.2\-alpha — CHANGELOG and Notes](./release-v0.1.2-alpha.mdx) - Built from merged PRs \#88\-\#108\. Added\, Changed\, Fixed\, Security\. Note\: docs\/release\.md still says v1\.0\.0 at launch — owner to reconcile\.
+* [Setup — Connect Claude to WaFine \(MCP \+ OAuth\)](./setup-connect-claude.mdx) - Step\-by\-step\: add WaFine as a custom connector in Claude\, sign in\, allow\, and start sending\. The OAuth flow keeps your API key out of Claude\.
+* [Setup — Deploy WaFine to Your Own Server \(OCI Casablanca\, Supabase\, Cloudflare Tunnel\)](./setup-deploy.mdx) - The one\-command bootstrap\, Terraform modules\, and deploy script to run WaFine on your own infrastructure — VM in Casablanca\, database in Paris\, tunnel to the world\.
+* [Setup — Send Your First Message \(REST API\)](./setup-send-message.mdx) - Mint a per\-session key\, call the REST API\, and see the message land in WhatsApp\. The key is shown once\, scoped to your session\, and counts against your daily send budget\.
+* [The Problem — WhatsApp Is Where Work Happens\, and the APIs Gatekeep It](./problem-whatsapp-automation.mdx) - Official WhatsApp APIs cost too much and gate access\; unofficial tools get your number banned\. We need a mesh of agents and people\, not another SaaS silo\.
+* [The Solution — WaFine Today\: REST\, MCP\, Pacing\, Casablanca Sessions\, Open\-Core on OpenWA](./solution-wafine-today.mdx) - What WaFine ships today\: one REST API\, one MCP endpoint\, paced auto\-replies\, your WhatsApp session on our Casablanca VM\, open\-core on OpenWA\.
+* [WaFine is live — launch day](./wafine-launch-day.mdx) - The waitlist opens to its first invited numbers today\. Here is what is live\: QR linking\, paced workflows\, per\-session keys\, the REST API\, MCP and the Claude connector\.
+* [Why Decisions Are Made — Three Real Calls\, Options Discarded\, Reasons Kept](./why-decisions-are-made.mdx) - Invite\-only waitlist\, no pricing at launch\, launch languages EN\/FR\/Darija — from the vault Decisions folder\, what was chosen\, what was rejected\, and why\.
