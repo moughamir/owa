@@ -25,7 +25,7 @@
     "hono": "^4.13.14",
     "ioredis": "^6.0.0",
     "libsodium-wrappers": "^0.8.4",
-    "postgres": "^3.4.9",
+    "postgres": "^4.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
