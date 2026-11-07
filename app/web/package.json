@@ -1,6 +1,6 @@
 {
   "name": "@wafine/web",
-  "version": "0.1.7-alpha",
+  "version": "0.2.0-alpha",
   "private": true,
   "type": "module",
   "scripts": {

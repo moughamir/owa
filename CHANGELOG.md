@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.0-alpha] - 2026-11-07
+
+### Security
+
+- Removed PII and session database from repository history.
+
+### Changed
+
+- Removed OpenKnowledge configuration and seed packs (moved to wafine-brain).
+
+### Dependencies
+
+- Bumped `@types/node` to 26.6.6 in /app/bff.
+- Bumped `postgres` to 4.0.0 in /app/bff.
+- Bumped minor-and-patch dependency group across 3 directories with 16 updates.
+
+### Release
+
+- Repo hygiene and release process (SECURITY.md, PR/issue templates, CODEOWNERS, Dependabot, CHANGELOG, docs/release.md).
+
 ## [0.1.7-alpha] - 2026-11-01
 
 Hardening & i18n wave, cut from `develop` at `4e75709` (14 PRs merged after v0.1.6-alpha; all CI-green).
@@ -149,7 +169,3 @@ Built from merged PRs #88 through #108 on `main`.
 ---
 
 ## [Unreleased]
-
-### Added
-
-- Repo hygiene and release process (SECURITY.md, PR/issue templates, CODEOWNERS, Dependabot, CHANGELOG, docs/release.md).
